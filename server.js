@@ -37,13 +37,13 @@ app.get('/products', (req, res) => {
 
 // Añadir producto desde admin.html
 app.post('/admin/products', (req, res) => {
-    const { name, price, image_url, description } = req.body;
-    if (!name || !price || !image_url) {
+    const { name, price, image } = req.body; // Cambié image_url por image
+    if (!name || !price) {
         return res.status(400).json({ error: 'Faltan datos requeridos' });
     }
 
-    const query = 'INSERT INTO products (name, price, image_url, description) VALUES (?, ?, ?, ?)';
-    db.query(query, [name, price, image_url, description || ''], (err, result) => {
+    const query = 'INSERT INTO products (name, price, image) VALUES (?, ?, ?)';
+    db.query(query, [name, price, image || null], (err, result) => { // Si image no viene, se guarda NULL
         if (err) {
             console.error(err);
             return res.status(500).json({ error: 'Error al añadir el producto' });
