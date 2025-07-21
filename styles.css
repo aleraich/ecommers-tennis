@@ -1,0 +1,30 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #1a1a1a;
+    color: #fff;
+}
+nav ul {
+    list-style: none;
+    display: flex;
+    justify-content: space-around;
+    padding: 1rem;
+    background-color: #2a2a2a;
+}
+nav ul li {
+    cursor: pointer;
+    padding: 0.5rem 1rem;
+}
+nav ul li:hover {
+    background-color: #333;
+}
+@media (max-width: 600px) {
+    nav ul {
+        flex-direction: column;
+        text-align: center;
+    }
+    nav ul li {
+        padding: 0.5rem 0;
+    }
+}

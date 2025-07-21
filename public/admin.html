@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Panel de Administración</title>
+</head>
+<body>
+    <h1>Añadir Producto</h1>
+    <form id="productForm">
+        <input type="text" name="name" placeholder="Nombre" required>
+        <input type="number" name="price" placeholder="Precio" step="0.01" required>
+        <input type="text" name="image" placeholder="URL de imagen" required>
+        <button type="submit">Añadir</button>
+    </form>
+    <script>
+        document.getElementById('productForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData);
+            await fetch('http://localhost:3000/admin/products', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            alert('Producto añadido');
+        });
+    </script>
+</body>
+</html>
