@@ -10,6 +10,11 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public'))); // Sirve archivos estáticos de /public
 
+// Sirve index.html al acceder a la raíz /
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 // Conexión a BD MySQL
 const db = mysql.createConnection({
     host: 'localhost',

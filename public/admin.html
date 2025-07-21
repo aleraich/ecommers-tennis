@@ -4,16 +4,19 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Panel de Administración</title>
+    <link rel="stylesheet" href="admin.css" />
 </head>
 <body>
-    <h1>Añadir Producto</h1>
-    <form id="productForm">
-        <input type="text" name="name" placeholder="Nombre" required />
-        <input type="number" name="price" placeholder="Precio" step="0.01" required />
-        <input type="text" name="image_url" placeholder="URL de imagen" required />
-        <input type="text" name="description" placeholder="Descripción (opcional)" />
-        <button type="submit">Añadir</button>
-    </form>
+    <div class="container">
+        <h1>Añadir Producto</h1>
+        <form id="productForm" class="product-form">
+            <input type="text" name="name" placeholder="Nombre" required />
+            <input type="number" name="price" placeholder="Precio" step="0.01" required />
+            <input type="text" name="image_url" placeholder="URL de imagen" required />
+            <input type="text" name="description" placeholder="Descripción (opcional)" />
+            <button type="submit">Añadir</button>
+        </form>
+    </div>
 
     <script>
         document.getElementById('productForm').addEventListener('submit', async (e) => {
