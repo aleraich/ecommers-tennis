@@ -1,41 +1,63 @@
 const express = require('express');
 const mysql = require('mysql2');
-const app = express();
-app.use(express.json());
+const cors = require('cors');
+const path = require('path');
 
+const app = express();
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public'))); // Sirve archivos estáticos de /public
+
+// Conexión a BD MySQL
 const db = mysql.createConnection({
     host: 'localhost',
     user: 'root',
-    password: '', // Ajusta si cambiaste la contraseña
+    password: '',
     database: 'mi_stockx_db'
 });
 
-// Listar productos (nueva ruta GET)
-app.get('/admin/products', (req, res) => {
+// Rutas API
+// Obtener todos los productos para index.html
+app.get('/products', (req, res) => {
     db.query('SELECT * FROM products', (err, results) => {
-        if (err) throw err;
+        if (err) {
+            console.error(err);
+            return res.status(500).json({ error: 'Error en la base de datos' });
+        }
         res.json(results);
     });
 });
 
-// Añadir producto (ruta POST existente)
+// Añadir producto desde admin.html
 app.post('/admin/products', (req, res) => {
-    const { name, price, image } = req.body;
-    const query = 'INSERT INTO products (name, price, image) VALUES (?, ?, ?)';
-    db.query(query, [name, price, image], (err, result) => {
-        if (err) throw err;
-        res.send('Producto añadido');
+    const { name, price, image_url, description } = req.body;
+    if (!name || !price || !image_url) {
+        return res.status(400).json({ error: 'Faltan datos requeridos' });
+    }
+
+    const query = 'INSERT INTO products (name, price, image_url, description) VALUES (?, ?, ?, ?)';
+    db.query(query, [name, price, image_url, description || ''], (err, result) => {
+        if (err) {
+            console.error(err);
+            return res.status(500).json({ error: 'Error al añadir el producto' });
+        }
+        res.json({ message: 'Producto añadido', id: result.insertId });
     });
 });
 
-// Eliminar producto (ruta DELETE existente)
+// Eliminar producto (opcional)
 app.delete('/admin/products/:id', (req, res) => {
     const { id } = req.params;
-    const query = 'DELETE FROM products WHERE id = ?';
-    db.query(query, [id], (err, result) => {
-        if (err) throw err;
-        res.send('Producto eliminado');
+    db.query('DELETE FROM products WHERE id = ?', [id], (err) => {
+        if (err) {
+            console.error(err);
+            return res.status(500).json({ error: 'Error al eliminar el producto' });
+        }
+        res.json({ message: 'Producto eliminado' });
     });
 });
 
-app.listen(3000, () => console.log('Servidor en http://localhost:3000'));
+const PORT = 3000;
+app.listen(PORT, () => console.log(`Servidor en http://localhost:${PORT}`));
