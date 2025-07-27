@@ -52,16 +52,18 @@
 
             <div id="loginForm" class="modal-form">
                 <h2>Entrar</h2>
-                <input type="email" id="loginEmail" placeholder="Correo electrónico" />
-                <input type="password" id="loginPassword" placeholder="Contraseña" />
+                <div id="loginError" class="error-message" style="display:none; color:red;"></div>
+                <input type="email" id="loginEmail" placeholder="Correo electrónico" required />
+                <input type="password" id="loginPassword" placeholder="Contraseña" required />
                 <button id="loginSubmit">Ingresar</button>
             </div>
 
             <div id="registerForm" class="modal-form" style="display:none;">
                 <h2>Registrarse</h2>
-                <input type="text" id="registerName" placeholder="Nombre completo" />
-                <input type="email" id="registerEmail" placeholder="Correo electrónico" />
-                <input type="password" id="registerPassword" placeholder="Contraseña" />
+                <div id="registerError" class="error-message" style="display:none; color:red;"></div>
+                <input type="text" id="registerName" placeholder="Nombre completo" required />
+                <input type="email" id="registerEmail" placeholder="Correo electrónico" required />
+                <input type="password" id="registerPassword" placeholder="Contraseña" required />
                 <button id="registerSubmit">Registrar</button>
             </div>
         </div>
@@ -72,16 +74,22 @@
         const modal = document.getElementById('modal');
         const loginForm = document.getElementById('loginForm');
         const registerForm = document.getElementById('registerForm');
+        const loginError = document.getElementById('loginError');
+        const registerError = document.getElementById('registerError');
 
         document.getElementById('btnLogin').addEventListener('click', () => {
             loginForm.style.display = 'block';
             registerForm.style.display = 'none';
+            loginError.style.display = 'none';
+            registerError.style.display = 'none';
             modal.style.display = 'block';
         });
 
         document.getElementById('btnRegister').addEventListener('click', () => {
             loginForm.style.display = 'none';
             registerForm.style.display = 'block';
+            loginError.style.display = 'none';
+            registerError.style.display = 'none';
             modal.style.display = 'block';
         });
 
@@ -90,8 +98,68 @@
         });
 
         window.addEventListener('click', (event) => {
-            if(event.target === modal) {
+            if (event.target === modal) {
                 modal.style.display = 'none';
+            }
+        });
+
+        // Manejar inicio de sesión
+        document.getElementById('loginSubmit').addEventListener('click', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+
+            try {
+                const response = await fetch('http://localhost:3000/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    modal.style.display = 'none';
+                    if (data.role === 'admin') {
+                        window.location.href = '/admin.html';
+                    } else if (data.role === 'cliente') {
+                        window.location.href = '/cliente.html';
+                    }
+                } else {
+                    loginError.style.display = 'block';
+                    loginError.textContent = data.message || 'Error al iniciar sesión';
+                }
+            } catch (error) {
+                loginError.style.display = 'block';
+                loginError.textContent = 'Error de conexión con el servidor';
+            }
+        });
+
+        // Manejar registro
+        document.getElementById('registerSubmit').addEventListener('click', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('registerName').value;
+            const email = document.getElementById('registerEmail').value;
+            const password = document.getElementById('registerPassword').value;
+
+            try {
+                const response = await fetch('http://localhost:3000/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email, password })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    modal.style.display = 'none';
+                    alert('Registro exitoso. Por favor, inicia sesión.');
+                    loginForm.style.display = 'block';
+                    registerForm.style.display = 'none';
+                    registerError.style.display = 'none';
+                } else {
+                    registerError.style.display = 'block';
+                    registerError.textContent = data.message || 'Error al registrarse';
+                }
+            } catch (error) {
+                registerError.style.display = 'block';
+                registerError.textContent = 'Error de conexión con el servidor';
             }
         });
 
@@ -108,7 +176,6 @@
                 emptyMessage.style.display = 'none';
                 productGrid.innerHTML = '';
 
-                // Cambiar URL si hay query para filtrar
                 const url = query 
                     ? `http://localhost:3000/products?search=${encodeURIComponent(query)}` 
                     : 'http://localhost:3000/products';
@@ -133,13 +200,12 @@
 
         function renderProducts(products) {
             const productGrid = document.getElementById('productGrid');
-            products.forEach(({ name, description, price, image_url }) => {
+            products.forEach(({ name, price, image }) => {
                 const card = document.createElement('div');
                 card.className = 'product-card';
                 card.innerHTML = `
-                    <img src="${image_url || 'https://via.placeholder.com/250'}" alt="${name}" />
+                    <img src="${image || 'https://via.placeholder.com/250'}" alt="${name}" />
                     <h3>${name}</h3>
-                    <p>${description || ''}</p>
                     <p class="price">$${price}</p>
                 `;
                 productGrid.appendChild(card);
