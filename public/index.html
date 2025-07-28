@@ -10,7 +10,7 @@
     <header>
         <div class="top-bar">
             <div class="left">
-                <h1 class="brand-name">RAHEL</h1>
+                <a href="#" id="brandLink"><h1 class="brand-name">RAHEL</h1></a>
                 <input type="search" id="searchInput" placeholder="Buscar productos..." />
             </div>
             <div class="right">
@@ -23,24 +23,21 @@
 
         <nav class="main-nav">
             <ul>
-                <li><a href="#">inicio</a></li>
-                <li><a href="#">Marcas</a></li>
-                <li><a href="#">Nuevo</a></li>
-                <li><a href="#">Hombres</a></li>
-                <li><a href="#">Mujeres</a></li>
-                <li><a href="#">Niños</a></li>
-                <li><a href="#">Calzados</a></li>
-                <li><a href="#">Ropa</a></li>
-                <li><a href="#">Accesorios</a></li>
-                <li><a href="#">Más categorías</a></li>
-                <li><a href="#">Ofertas</a></li>
-                <li><a href="/admin.html" id="adminLink" style="display: none;">Administrar</a></li>
+                <li><a href="#" data-category="HOMBRE">HOMBRE</a></li>
+                <li><a href="#" data-category="MUJER">MUJER</a></li>
+                <li><a href="#" data-category="NIÑO">NIÑO</a></li>
+                <li><a href="#" data-category="NIÑA">NIÑA</a></li>
+                <li><a href="#" data-category="MARCAS">MARCAS</a></li>
+                <li><a href="#" data-category="LO MÁS NUEVO">LO MÁS NUEVO</a></li>
+                <li><a href="#" data-category="DÍAS ROJOS">↓↓DÍAS ROJOS↓↓</a></li>
+                <li><a href="#" data-category="DEPORTE">DEPORTE</a></li>
+                <li><a href="admin.html" id="adminLink" style="display: none;">Administrar</a></li>
             </ul>
         </nav>
     </header>
 
     <main class="container">
-        <h2>Productos</h2>
+        <h2 id="sectionTitle">Productos recientes</h2>
         <div class="loading-message" id="loadingMessage">Cargando productos...</div>
         <div class="error-message" id="errorMessage" style="display:none;"></div>
         <div class="empty-message" id="emptyMessage" style="display:none;">No hay productos disponibles.</div>
@@ -57,7 +54,7 @@
                 <div id="loginError" class="error-message" style="display:none; color:red;"></div>
                 <input type="email" id="loginEmail" placeholder="Correo electrónico" required />
                 <input type="password" id="loginPassword" placeholder="Contraseña" required />
-                <button id="loginSubmit">Ingresar</button>
+                <button id="loginSubmit">Enviar</button>
             </div>
 
             <div id="registerForm" class="modal-form" style="display:none;">
@@ -83,6 +80,10 @@
         const btnLogout = document.getElementById('btnLogout');
         const userGreeting = document.getElementById('userGreeting');
         const adminLink = document.getElementById('adminLink');
+        const brandLink = document.getElementById('brandLink');
+        const sectionTitle = document.getElementById('sectionTitle');
+        let currentCategory = '';
+        let currentSort = 'newest'; // Por defecto, muestra productos recientes
 
         // Verificar si hay un usuario autenticado
         function checkAuth() {
@@ -109,7 +110,10 @@
         }
 
         // Llamar a checkAuth al cargar la página
-        document.addEventListener('DOMContentLoaded', checkAuth);
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth();
+            loadProducts();
+        });
 
         // Botones de modal
         btnLogin.addEventListener('click', () => {
@@ -134,7 +138,10 @@
             localStorage.removeItem('userName');
             localStorage.removeItem('userRole');
             checkAuth();
-            loadProducts(); // Recargar productos sin token
+            currentCategory = '';
+            currentSort = 'newest';
+            sectionTitle.textContent = 'Productos recientes';
+            loadProducts();
         });
 
         document.getElementById('modalClose').addEventListener('click', () => {
@@ -214,8 +221,8 @@
             }
         });
 
-        // Cargar productos y buscar con el input
-        async function loadProducts(query = '') {
+        // Cargar productos
+        async function loadProducts(query = '', category = currentCategory, sort = currentSort) {
             const loadingMessage = document.getElementById('loadingMessage');
             const errorMessage = document.getElementById('errorMessage');
             const emptyMessage = document.getElementById('emptyMessage');
@@ -228,13 +235,16 @@
                 emptyMessage.style.display = 'none';
                 productGrid.innerHTML = '';
 
-                const url = query 
-                    ? `http://localhost:3000/products?search=${encodeURIComponent(query)}` 
-                    : 'http://localhost:3000/products';
+                let url = new URL('http://localhost:3000/products');
+                const params = new URLSearchParams();
+                if (query) params.append('search', query);
+                if (category) params.append('category', category);
+                if (sort) params.append('sort', sort);
+                url.search = params.toString();
 
                 const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
                 const response = await fetch(url, { method: 'GET', headers });
-                if (!response.ok) throw new Error(`Error ${response.status}`);
+                if (!response.ok) throw new Error(`Error ${response.status}: ${response.statusText}`);
 
                 const products = await response.json();
                 loadingMessage.style.display = 'none';
@@ -245,36 +255,61 @@
                 }
                 renderProducts(products);
             } catch (err) {
+                console.error(err);
                 loadingMessage.style.display = 'none';
                 errorMessage.style.display = 'block';
                 errorMessage.textContent = `Error al cargar productos: ${err.message}`;
             }
         }
 
-        function renderProducts(products) {
-            const productGrid = document.getElementById('productGrid');
-            products.forEach(({ name, price, image }) => {
-                const card = document.createElement('div');
-                card.className = 'product-card';
-                card.innerHTML = `
-                    <img src="${image || 'https://via.placeholder.com/250'}" alt="${name}" />
-                    <h3>${name}</h3>
-                    <p class="price">$${price}</p>
-                `;
-                productGrid.appendChild(card);
-            });
-        }
+       function renderProducts(products) {
+    const productGrid = document.getElementById('productGrid');
+    productGrid.innerHTML = '';
+    products.forEach(({ name, price, media }) => {
+        const card = document.createElement('div');
+        card.className = 'product-card';
+        const mediaElement = media && (media.endsWith('.mp4') || media.endsWith('.webm')) ?
+            `<video src="${media}" alt="${name}" width="250" controls></video>` :
+            `<img src="${media || 'https://via.placeholder.com/250'}" alt="${name}" />`;
+        card.innerHTML = `
+            ${mediaElement}
+            <h3>${name}</h3>
+            <p class="price">$${price}</p>
+        `;
+        productGrid.appendChild(card);
+    });
+}
 
-        // Evento buscar
-        document.getElementById('searchInput').addEventListener('input', (e) => {
-            const query = e.target.value.trim();
-            loadProducts(query);
+        // Manejar clic en el logo RAHEL
+        brandLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            currentCategory = '';
+            currentSort = 'newest';
+            sectionTitle.textContent = 'Productos recientes';
+            const navLinks = document.querySelectorAll('.main-nav a:not(#adminLink)');
+            navLinks.forEach(l => l.classList.remove('active'));
+            loadProducts();
         });
 
-        // Cargar productos al inicio
-        document.addEventListener('DOMContentLoaded', () => {
-            loadProducts();
+        // Manejar clics en el menú principal
+        const navLinks = document.querySelectorAll('.main-nav a:not(#adminLink)');
+        navLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                navLinks.forEach(l => l.classList.remove('active'));
+                link.classList.add('active');
+                currentCategory = link.dataset.category || '';
+                currentSort = ''; // Desactiva orden por newest al seleccionar categoría
+                sectionTitle.textContent = currentCategory || 'Productos';
+                loadProducts(document.getElementById('searchInput').value, currentCategory);
+            });
+        });
+
+        // Evento de búsqueda
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            const query = e.target.value.trim();
+            loadProducts(query, currentCategory, currentSort);
         });
     </script>
 </body>
-</html>
+</html> 

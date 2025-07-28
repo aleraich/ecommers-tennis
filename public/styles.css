@@ -189,3 +189,33 @@ header {
 .modal-content button:hover {
     background-color: #357abd;
 }
+/* styles.css */
+.main-nav a.active {
+    background-color: #00ccff;
+    color: #1a1a1a;
+    font-weight: bold;
+}
+
+/* admin.css */
+.product-form select {
+    padding: 10px;
+    background-color: #333;
+    border: none;
+    color: #fff;
+    font-size: 16px;
+}
+.brand-name {
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit; /* O el color que prefieras */
+}
+.brand-name:hover {
+    text-decoration: underline;
+}
+
+.product-card img, .product-card video {
+    width: 100%;
+    height: auto;
+    max-height: 250px;
+    object-fit: cover;
+}

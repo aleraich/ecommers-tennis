@@ -108,3 +108,43 @@ body {
     margin-top: 20px;
     font-size: 16px;
 }
+/* styles.css */
+.main-nav a.active {
+    background-color: #00ccff;
+    color: #1a1a1a;
+    font-weight: bold;
+}
+
+/* admin.css */
+.product-form select {
+    padding: 10px;
+    background-color: #333;
+    border: none;
+    color: #fff;
+    font-size: 16px;
+}
+/* styles.css */
+.main-nav a.active {
+    background-color: #00ccff;
+    color: #1a1a1a;
+    font-weight: bold;
+}
+
+/* admin.css */
+.product-form select {
+    padding: 10px;
+    background-color: #333;
+    border: none;
+    color: #fff;
+    font-size: 16px;
+}
+#productTable th, #productTable td {
+    padding: 10px;
+    border: 1px solid #444;
+    text-align: left;
+    min-width: 100px; /* Ajusta según necesidad */
+}
+#productTable img, #productTable video {
+    max-width: 50px;
+    height: auto;
+}

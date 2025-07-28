@@ -4,9 +4,35 @@ const cors = require('cors');
 const path = require('path');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const multer = require('multer');
 
 const app = express();
 const JWT_SECRET = 'tu_secreto_super_seguro'; // Cambia esto por una clave segura en producción
+
+// Configuración de Multer para subir archivos
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'public/uploads/'); // Carpeta donde se guardarán los archivos
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, uniqueSuffix + path.extname(file.originalname));
+    }
+});
+const upload = multer({
+    storage,
+    fileFilter: (req, file, cb) => {
+        const fileTypes = /jpeg|jpg|png|mp4|webm/;
+        const extname = fileTypes.test(path.extname(file.originalname).toLowerCase());
+        const mimetype = fileTypes.test(file.mimetype);
+        if (extname && mimetype) {
+            return cb(null, true);
+        } else {
+            cb(new Error('Solo se permiten imágenes (JPEG, PNG) y videos (MP4, WEBM)'));
+        }
+    },
+    limits: { fileSize: 50 * 1024 * 1024 } // Límite de 50MB
+});
 
 // Middleware
 app.use(cors());
@@ -15,11 +41,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Middleware para verificar JWT
 const verifyToken = (req, res, next) => {
-    const token = req.headers['authorization']?.split(' ')[1]; // Expect 'Bearer <token>'
+    const token = req.headers['authorization']?.split(' ')[1];
     if (!token) return res.status(401).json({ message: 'Token requerido' });
 
     jwt.verify(token, JWT_SECRET, (err, decoded) => {
-        if (err) return res.status(403).json({ message: 'Token inválido' });
+        if (err) return res.status(403).json({ message: 'Token inválido o expirado' });
         req.user = decoded;
         next();
     });
@@ -54,6 +80,14 @@ const db = mysql.createConnection({
     database: 'mi_stockx_db'
 });
 
+db.connect((err) => {
+    if (err) {
+        console.error('Error al conectar a la base de datos:', err);
+        process.exit(1);
+    }
+    console.log('Conectado a la base de datos MySQL');
+});
+
 // Endpoint para login
 app.post('/api/login', (req, res) => {
     const { email, password } = req.body;
@@ -65,7 +99,7 @@ app.post('/api/login', (req, res) => {
     db.query('SELECT * FROM usuarios WHERE email = ?', [email], (err, results) => {
         if (err) {
             console.error('Error en la base de datos:', err);
-            return res.status(500).json({ message: 'Error en el servidor' });
+            return res.status(500).json({ message: 'Error en el servidor', error: err.message });
         }
 
         if (results.length === 0) {
@@ -76,14 +110,13 @@ app.post('/api/login', (req, res) => {
         bcrypt.compare(password, user.password, (err, isValid) => {
             if (err) {
                 console.error('Error al verificar contraseña:', err);
-                return res.status(500).json({ message: 'Error en el servidor' });
+                return res.status(500).json({ message: 'Error en el servidor', error: err.message });
             }
 
             if (!isValid) {
                 return res.status(401).json({ message: 'Contraseña incorrecta' });
             }
 
-            // Generar token JWT
             const token = jwt.sign({ id: user.id, email: user.email, role: user.role, nombre: user.nombre }, JWT_SECRET, {
                 expiresIn: '1h'
             });
@@ -104,7 +137,7 @@ app.post('/api/register', (req, res) => {
     db.query('SELECT * FROM usuarios WHERE email = ?', [email], (err, results) => {
         if (err) {
             console.error('Error en la base de datos:', err);
-            return res.status(500).json({ message: 'Error en el servidor' });
+            return res.status(500).json({ message: 'Error en el servidor', error: err.message });
         }
 
         if (results.length > 0) {
@@ -114,14 +147,14 @@ app.post('/api/register', (req, res) => {
         bcrypt.hash(password, 10, (err, hash) => {
             if (err) {
                 console.error('Error al hashear contraseña:', err);
-                return res.status(500).json({ message: 'Error en el servidor' });
+                return res.status(500).json({ message: 'Error en el servidor', error: err.message });
             }
 
             db.query('INSERT INTO usuarios (nombre, email, password, role) VALUES (?, ?, ?, ?)', 
                     [name, email, hash, 'cliente'], (err, result) => {
                 if (err) {
                     console.error('Error al registrar usuario:', err);
-                    return res.status(500).json({ message: 'Error al registrar el usuario' });
+                    return res.status(500).json({ message: 'Error al registrar el usuario', error: err.message });
                 }
                 res.json({ message: 'Usuario registrado exitosamente' });
             });
@@ -129,36 +162,50 @@ app.post('/api/register', (req, res) => {
     });
 });
 
-// Obtener todos los productos (sin protección por ahora, opcional: verifyToken)
+// Obtener todos los productos
 app.get('/products', (req, res) => {
-    const { search } = req.query;
-    let query = 'SELECT * FROM products';
-    let params = [];
+    const { search, category, sort } = req.query;
+    let query = 'SELECT id, name, price, CASE WHEN media IS NOT NULL THEN CONCAT(?, media) ELSE NULL END AS media, description, category, created_at FROM products';
+    let params = ['http://localhost:3000'];
+    let conditions = [];
+
     if (search) {
-        query += ' WHERE name LIKE ?';
-        params = [`%${search}%`];
+        conditions.push('name LIKE ?');
+        params.push(`%${search}%`);
     }
+    if (category) {
+        conditions.push('category = ?');
+        params.push(category);
+    }
+    if (conditions.length > 0) {
+        query += ' WHERE ' + conditions.join(' AND ');
+    }
+    if (sort === 'newest') {
+        query += ' ORDER BY created_at DESC';
+    }
+
     db.query(query, params, (err, results) => {
         if (err) {
             console.error('Error en la base de datos:', err);
-            return res.status(500).json({ message: 'Error en la base de datos' });
+            return res.status(500).json({ message: 'Error en la base de datos', error: err.message });
         }
         res.json(results);
     });
 });
 
 // Añadir producto (protegido)
-app.post('/admin/products', verifyToken, verifyAdmin, (req, res) => {
-    const { name, price, image, description } = req.body;
+app.post('/admin/products', verifyToken, verifyAdmin, upload.single('media'), (req, res) => {
+    const { name, price, description, category } = req.body;
     if (!name || !price) {
         return res.status(400).json({ message: 'Nombre y precio son requeridos' });
     }
 
-    const query = 'INSERT INTO products (name, price, image, description) VALUES (?, ?, ?, ?)';
-    db.query(query, [name, price, image || null, description || null], (err, result) => {
+    const media = req.file ? `/uploads/${req.file.filename}` : null;
+    const query = 'INSERT INTO products (name, price, media, description, category) VALUES (?, ?, ?, ?, ?)';
+    db.query(query, [name, price, media, description || null, category || null], (err, result) => {
         if (err) {
             console.error('Error al añadir el producto:', err);
-            return res.status(500).json({ message: 'Error al añadir el producto en la base de datos' });
+            return res.status(500).json({ message: 'Error al añadir el producto en la base de datos', error: err.message });
         }
         res.json({ message: 'Producto añadido', id: result.insertId });
     });
@@ -167,15 +214,34 @@ app.post('/admin/products', verifyToken, verifyAdmin, (req, res) => {
 // Eliminar producto (protegido)
 app.delete('/admin/products/:id', verifyToken, verifyAdmin, (req, res) => {
     const { id } = req.params;
-    db.query('DELETE FROM products WHERE id = ?', [id], (err, result) => {
+    // Obtener la ruta del archivo antes de eliminar
+    db.query('SELECT media FROM products WHERE id = ?', [id], (err, results) => {
         if (err) {
-            console.error('Error al eliminar el producto:', err);
-            return res.status(500).json({ message: 'Error al eliminar el producto' });
+            console.error('Error al obtener el producto:', err);
+            return res.status(500).json({ message: 'Error al obtener el producto', error: err.message });
         }
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ message: 'Producto no encontrado' });
-        }
-        res.json({ message: 'Producto eliminado' });
+        const media = results[0]?.media;
+        // Eliminar el producto
+        db.query('DELETE FROM products WHERE id = ?', [id], (err, result) => {
+            if (err) {
+                console.error('Error al eliminar el producto:', err);
+                return res.status(500).json({ message: 'Error al eliminar el producto', error: err.message });
+            }
+            if (result.affectedRows === 0) {
+                return res.status(404).json({ message: 'Producto no encontrado' });
+            }
+            // Eliminar el archivo del servidor solo si existe
+            if (media && media.startsWith('/uploads/')) {
+                const fs = require('fs');
+                const filePath = path.join(__dirname, 'public', media);
+                fs.unlink(filePath, (err) => {
+                    if (err && err.code !== 'ENOENT') {
+                        console.error('Error al eliminar el archivo:', err);
+                    }
+                });
+            }
+            res.json({ message: 'Producto eliminado' });
+        });
     });
 });
 
@@ -185,7 +251,7 @@ app.post('/api/debug-password', (req, res) => {
     db.query('SELECT password FROM usuarios WHERE email = ?', [email], (err, results) => {
         if (err) {
             console.error('Error en la base de datos:', err);
-            return res.status(500).json({ message: 'Error en el servidor' });
+            return res.status(500).json({ message: 'Error en el servidor', error: err.message });
         }
         if (results.length === 0) {
             return res.status(404).json({ message: 'Correo no encontrado' });
@@ -194,7 +260,7 @@ app.post('/api/debug-password', (req, res) => {
         bcrypt.compare(password, storedHash, (err, isValid) => {
             if (err) {
                 console.error('Error al verificar contraseña:', err);
-                return res.status(500).json({ message: 'Error en el servidor' });
+                return res.status(500).json({ message: 'Error en el servidor', error: err.message });
             }
             res.json({ 
                 email,
