@@ -7,12 +7,12 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 
 const app = express();
-const JWT_SECRET = process.env.JWT_SECRET || 'tu_secreto_super_seguro'; // Usa variable de entorno en producción
+const JWT_SECRET = 'tu_secreto_super_seguro'; // Cambia esto por una clave segura en producción
 
 // Configuración de Multer para subir archivos
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, 'public/uploads/');
+        cb(null, 'public/uploads/'); // Carpeta donde se guardarán los archivos
     },
     filename: (req, file, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
@@ -31,7 +31,7 @@ const upload = multer({
             cb(new Error('Solo se permiten imágenes (JPEG, PNG) y videos (MP4, WEBM)'));
         }
     },
-    limits: { fileSize: 50 * 1024 * 1024 }
+    limits: { fileSize: 50 * 1024 * 1024 } // Límite de 50MB
 });
 
 // Middleware
@@ -74,10 +74,10 @@ app.get('/api/login', (req, res) => {
 
 // Conexión a BD MySQL
 const db = mysql.createConnection({
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'mi_stockx_db'
+    host: 'localhost',
+    user: 'root',
+    password: '',
+    database: 'mi_stockx_db'
 });
 
 db.connect((err) => {
@@ -166,7 +166,7 @@ app.post('/api/register', (req, res) => {
 app.get('/products', (req, res) => {
     const { search, category, sort } = req.query;
     let query = 'SELECT id, name, price, CASE WHEN media IS NOT NULL THEN CONCAT(?, media) ELSE NULL END AS media, description, category, created_at FROM products';
-    let params = ['https://' + process.env.RENDER_EXTERNAL_HOSTNAME || 'http://localhost:3000'];
+    let params = ['http://localhost:3000'];
     let conditions = [];
 
     if (search) {
@@ -214,12 +214,14 @@ app.post('/admin/products', verifyToken, verifyAdmin, upload.single('media'), (r
 // Eliminar producto (protegido)
 app.delete('/admin/products/:id', verifyToken, verifyAdmin, (req, res) => {
     const { id } = req.params;
+    // Obtener la ruta del archivo antes de eliminar
     db.query('SELECT media FROM products WHERE id = ?', [id], (err, results) => {
         if (err) {
             console.error('Error al obtener el producto:', err);
             return res.status(500).json({ message: 'Error al obtener el producto', error: err.message });
         }
         const media = results[0]?.media;
+        // Eliminar el producto
         db.query('DELETE FROM products WHERE id = ?', [id], (err, result) => {
             if (err) {
                 console.error('Error al eliminar el producto:', err);
@@ -228,6 +230,7 @@ app.delete('/admin/products/:id', verifyToken, verifyAdmin, (req, res) => {
             if (result.affectedRows === 0) {
                 return res.status(404).json({ message: 'Producto no encontrado' });
             }
+            // Eliminar el archivo del servidor solo si existe
             if (media && media.startsWith('/uploads/')) {
                 const fs = require('fs');
                 const filePath = path.join(__dirname, 'public', media);
@@ -277,5 +280,5 @@ app.get('/cliente.html', verifyToken, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'cliente.html'));
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, '0.0.0.0', () => console.log(`Servidor en http://localhost:${PORT}`));
+const PORT = 3000;
+app.listen(PORT, () => console.log(`Servidor en http://localhost:${PORT}`));
