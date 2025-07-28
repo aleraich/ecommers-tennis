@@ -3,47 +3,260 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Panel de Administración</title>
+    <title>RAHEL - Panel de Administración</title>
     <link rel="stylesheet" href="admin.css" />
 </head>
 <body>
-    <div class="container">
-        <h1>Añadir Producto</h1>
-        <form id="productForm" class="product-form">
-            <input type="text" name="name" placeholder="Nombre" required />
-            <input type="number" name="price" placeholder="Precio" step="0.01" required />
-            <input type="text" name="image_url" placeholder="URL de imagen" required />
-            <input type="text" name="description" placeholder="Descripción (opcional)" />
-            <button type="submit">Añadir</button>
-        </form>
+    <!-- Barra superior -->
+    <header class="top-bar">
+        <div class="left">
+            <h1 class="brand-name">RAHEL - Admin</h1>
+        </div>
+        <div class="right">
+            <span class="auth-link" id="userGreeting"></span>
+            <a href="#" class="auth-link" id="logoutLink">Cerrar sesión</a>
+        </div>
+    </header>
+
+    <!-- Menú lateral -->
+    <div class="sidebar">
+        <ul>
+            <li><a href="#dashboard" class="active">Dashboard</a></li>
+            <li><a href="#products">Productos</a></li>
+            <li><a href="#orders">Pedidos</a></li>
+            <li><a href="#users">Usuarios</a></li>
+            <li><a href="#inventory">Inventario</a></li>
+            <li><a href="#promotions">Promociones</a></li>
+            <li><a href="#reports">Reportes</a></li>
+            <li><a href="#settings">Configuración</a></li>
+        </ul>
     </div>
 
+    <!-- Contenido principal -->
+    <main class="admin-container">
+        <section id="dashboard" class="section">
+            <h2>Dashboard</h2>
+            <p>Bienvenido al panel de administración. Aquí podrás ver un resumen de las métricas de tu tienda (próximamente).</p>
+        </section>
+
+        <section id="products" class="section">
+            <h2>Añadir Producto</h2>
+            <form id="productForm" class="product-form">
+                <input type="text" name="name" placeholder="Nombre" required />
+                <input type="number" name="price" placeholder="Precio" step="0.01" required />
+                <input type="text" name="image" placeholder="URL de imagen" />
+                <input type="text" name="description" placeholder="Descripción (opcional)" />
+                <button type="submit">Añadir</button>
+            </form>
+            <h2>Listado de Productos</h2>
+            <table id="productTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre</th>
+                        <th>Precio</th>
+                        <th>Imagen</th>
+                        <th>Descripción</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="productList"></tbody>
+            </table>
+            <div id="loadingMessage" class="loading-message" style="display: none;">Cargando productos...</div>
+            <div id="errorMessage" class="error-message" style="display: none; color: red;"></div>
+            <div id="emptyMessage" class="empty-message" style="display: none;">No hay productos disponibles.</div>
+        </section>
+
+        <section id="orders" class="section" style="display: none;">
+            <h2>Pedidos</h2>
+            <p>Gestión de pedidos de clientes (próximamente).</p>
+        </section>
+
+        <section id="users" class="section" style="display: none;">
+            <h2>Usuarios</h2>
+            <p>Gestión de clientes y administradores (próximamente).</p>
+        </section>
+
+        <section id="inventory" class="section" style="display: none;">
+            <h2>Inventario</h2>
+            <p>Control de stock de productos (próximamente).</p>
+        </section>
+
+        <section id="promotions" class="section" style="display: none;">
+            <h2>Promociones</h2>
+            <p>Crear y gestionar descuentos (próximamente).</p>
+        </section>
+
+        <section id="reports" class="section" style="display: none;">
+            <h2>Reportes</h2>
+            <p>Análisis de ventas y usuarios (próximamente).</p>
+        </section>
+
+        <section id="settings" class="section" style="display: none;">
+            <h2>Configuración</h2>
+            <p>Ajustes de la tienda (próximamente).</p>
+        </section>
+    </main>
+
     <script>
+        // Saludo personalizado y cerrar sesión
+        document.getElementById('userGreeting').textContent = `Hola, ${localStorage.getItem('userName') || 'Administrador'}`;
+        document.getElementById('logoutLink').addEventListener('click', (e) => {
+            e.preventDefault();
+            localStorage.removeItem('userName');
+            localStorage.removeItem('token');
+            localStorage.removeItem('userRole');
+            window.location.href = '/';
+        });
+
+        // Manejar el formulario de añadir productos
         document.getElementById('productForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData);
+            const token = localStorage.getItem('token');
+
+            if (!token) {
+                alert('Error: No estás autenticado. Por favor, inicia sesión nuevamente.');
+                window.location.href = '/';
+                return;
+            }
 
             try {
                 const res = await fetch('http://localhost:3000/admin/products', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
                     body: JSON.stringify(data)
                 });
 
+                const responseData = await res.json();
                 if (!res.ok) {
-                    const errorData = await res.json();
-                    alert('Error: ' + (errorData.error || 'No se pudo añadir el producto'));
+                    alert(`Error (${res.status}): ${responseData.message || responseData.error || 'No se pudo añadir el producto'}`);
                     return;
                 }
 
                 alert('Producto añadido con éxito');
                 e.target.reset();
+                loadProducts();
             } catch (err) {
-                alert('Error de red o servidor');
+                alert('Error de red o servidor: ' + err.message);
                 console.error(err);
             }
         });
+
+        // Cargar productos
+        async function loadProducts() {
+            const loadingMessage = document.getElementById('loadingMessage');
+            const errorMessage = document.getElementById('errorMessage');
+            const emptyMessage = document.getElementById('emptyMessage');
+            const productList = document.getElementById('productList');
+            const token = localStorage.getItem('token');
+
+            if (!token) {
+                alert('Error: No estás autenticado. Por favor, inicia sesión nuevamente.');
+                window.location.href = '/';
+                return;
+            }
+
+            try {
+                loadingMessage.style.display = 'block';
+                errorMessage.style.display = 'none';
+                emptyMessage.style.display = 'none';
+                productList.innerHTML = '';
+
+                const response = await fetch('http://localhost:3000/products', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`Error ${response.status}: ${errorData.message || 'No se pudieron cargar los productos'}`);
+                }
+
+                const products = await response.json();
+                loadingMessage.style.display = 'none';
+
+                if (!products || products.length === 0) {
+                    emptyMessage.style.display = 'block';
+                    return;
+                }
+
+                products.forEach(product => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${product.id}</td>
+                        <td>${product.name}</td>
+                        <td>$${product.price}</td>
+                        <td>${product.image ? `<img src="${product.image}" alt="${product.name}" width="50">` : 'Sin imagen'}</td>
+                        <td>${product.description || 'Sin descripción'}</td>
+                        <td><button onclick="deleteProduct(${product.id})">Eliminar</button></td>
+                    `;
+                    productList.appendChild(row);
+                });
+            } catch (err) {
+                loadingMessage.style.display = 'none';
+                errorMessage.style.display = 'block';
+                errorMessage.textContent = err.message;
+            }
+        }
+
+        // Eliminar producto
+        async function deleteProduct(id) {
+            if (confirm('¿Seguro que quieres eliminar este producto?')) {
+                const token = localStorage.getItem('token');
+
+                if (!token) {
+                    alert('Error: No estás autenticado. Por favor, inicia sesión nuevamente.');
+                    window.location.href = '/';
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`http://localhost:3000/admin/products/${id}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    const data = await response.json();
+                    if (!response.ok) {
+                        alert(`Error (${response.status}): ${data.message || data.error || 'No se pudo eliminar el producto'}`);
+                        return;
+                    }
+
+                    alert('Producto eliminado');
+                    loadProducts();
+                } catch (error) {
+                    alert('Error de red o servidor: ' + error.message);
+                }
+            }
+        }
+
+        // Manejar el menú lateral
+        const menuItems = document.querySelectorAll('.sidebar a');
+        const sections = document.querySelectorAll('.section');
+
+        menuItems.forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                const targetSection = item.getAttribute('href').substring(1);
+
+                sections.forEach(section => {
+                    section.style.display = 'none';
+                });
+
+                document.getElementById(targetSection).style.display = 'block';
+                menuItems.forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+
+                if (targetSection === 'products') {
+                    loadProducts();
+                }
+            });
+        });
+
+        // Mostrar solo el dashboard por defecto
+        document.getElementById('dashboard').style.display = 'block';
     </script>
 </body>
 </html>

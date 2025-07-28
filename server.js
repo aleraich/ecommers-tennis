@@ -3,17 +3,42 @@ const mysql = require('mysql2');
 const cors = require('cors');
 const path = require('path');
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 
 const app = express();
+const JWT_SECRET = 'tu_secreto_super_seguro'; // Cambia esto por una clave segura en producción
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Middleware para verificar JWT
+const verifyToken = (req, res, next) => {
+    const token = req.headers['authorization']?.split(' ')[1]; // Expect 'Bearer <token>'
+    if (!token) return res.status(401).json({ message: 'Token requerido' });
+
+    jwt.verify(token, JWT_SECRET, (err, decoded) => {
+        if (err) return res.status(403).json({ message: 'Token inválido' });
+        req.user = decoded;
+        next();
+    });
+};
+
+// Middleware para verificar rol de admin
+const verifyAdmin = (req, res, next) => {
+    if (req.user.role !== 'admin') return res.status(403).json({ message: 'Acceso denegado: se requiere rol de administrador' });
+    next();
+};
+
 // Sirve index.html al acceder a la raíz /
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Proteger la ruta de admin.html
+app.get('/admin.html', verifyToken, verifyAdmin, (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
 // Evitar error "Cannot GET /api/login"
@@ -25,7 +50,7 @@ app.get('/api/login', (req, res) => {
 const db = mysql.createConnection({
     host: 'localhost',
     user: 'root',
-    password: '', // Asegúrate de que esta es tu contraseña
+    password: '',
     database: 'mi_stockx_db'
 });
 
@@ -48,7 +73,6 @@ app.post('/api/login', (req, res) => {
         }
 
         const user = results[0];
-        console.log('Verificando login - Email:', email, 'Contraseña ingresada:', password, 'Hash almacenado:', user.password);
         bcrypt.compare(password, user.password, (err, isValid) => {
             if (err) {
                 console.error('Error al verificar contraseña:', err);
@@ -59,7 +83,12 @@ app.post('/api/login', (req, res) => {
                 return res.status(401).json({ message: 'Contraseña incorrecta' });
             }
 
-            res.json({ role: user.role, message: 'Inicio de sesión exitoso' });
+            // Generar token JWT
+            const token = jwt.sign({ id: user.id, email: user.email, role: user.role, nombre: user.nombre }, JWT_SECRET, {
+                expiresIn: '1h'
+            });
+
+            res.json({ role: user.role, nombre: user.nombre, token, message: 'Inicio de sesión exitoso' });
         });
     });
 });
@@ -72,7 +101,6 @@ app.post('/api/register', (req, res) => {
         return res.status(400).json({ message: 'Nombre, correo y contraseña son requeridos' });
     }
 
-    // Verificar si el correo ya existe
     db.query('SELECT * FROM usuarios WHERE email = ?', [email], (err, results) => {
         if (err) {
             console.error('Error en la base de datos:', err);
@@ -83,14 +111,12 @@ app.post('/api/register', (req, res) => {
             return res.status(400).json({ message: 'El correo ya está registrado' });
         }
 
-        // Hashear la contraseña
         bcrypt.hash(password, 10, (err, hash) => {
             if (err) {
                 console.error('Error al hashear contraseña:', err);
                 return res.status(500).json({ message: 'Error en el servidor' });
             }
 
-            // Insertar el nuevo usuario como cliente
             db.query('INSERT INTO usuarios (nombre, email, password, role) VALUES (?, ?, ?, ?)', 
                     [name, email, hash, 'cliente'], (err, result) => {
                 if (err) {
@@ -103,7 +129,7 @@ app.post('/api/register', (req, res) => {
     });
 });
 
-// Obtener todos los productos para index.html
+// Obtener todos los productos (sin protección por ahora, opcional: verifyToken)
 app.get('/products', (req, res) => {
     const { search } = req.query;
     let query = 'SELECT * FROM products';
@@ -114,37 +140,40 @@ app.get('/products', (req, res) => {
     }
     db.query(query, params, (err, results) => {
         if (err) {
-            console.error(err);
-            return res.status(500).json({ error: 'Error en la base de datos' });
+            console.error('Error en la base de datos:', err);
+            return res.status(500).json({ message: 'Error en la base de datos' });
         }
         res.json(results);
     });
 });
 
-// Añadir producto desde admin.html
-app.post('/admin/products', (req, res) => {
-    const { name, price, image } = req.body;
+// Añadir producto (protegido)
+app.post('/admin/products', verifyToken, verifyAdmin, (req, res) => {
+    const { name, price, image, description } = req.body;
     if (!name || !price) {
-        return res.status(400).json({ error: 'Faltan datos requeridos' });
+        return res.status(400).json({ message: 'Nombre y precio son requeridos' });
     }
 
-    const query = 'INSERT INTO products (name, price, image) VALUES (?, ?, ?)';
-    db.query(query, [name, price, image || null], (err, result) => {
+    const query = 'INSERT INTO products (name, price, image, description) VALUES (?, ?, ?, ?)';
+    db.query(query, [name, price, image || null, description || null], (err, result) => {
         if (err) {
-            console.error(err);
-            return res.status(500).json({ error: 'Error al añadir el producto' });
+            console.error('Error al añadir el producto:', err);
+            return res.status(500).json({ message: 'Error al añadir el producto en la base de datos' });
         }
         res.json({ message: 'Producto añadido', id: result.insertId });
     });
 });
 
-// Eliminar producto
-app.delete('/admin/products/:id', (req, res) => {
+// Eliminar producto (protegido)
+app.delete('/admin/products/:id', verifyToken, verifyAdmin, (req, res) => {
     const { id } = req.params;
-    db.query('DELETE FROM products WHERE id = ?', [id], (err) => {
+    db.query('DELETE FROM products WHERE id = ?', [id], (err, result) => {
         if (err) {
-            console.error(err);
-            return res.status(500).json({ error: 'Error al eliminar el producto' });
+            console.error('Error al eliminar el producto:', err);
+            return res.status(500).json({ message: 'Error al eliminar el producto' });
+        }
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'Producto no encontrado' });
         }
         res.json({ message: 'Producto eliminado' });
     });
@@ -175,6 +204,14 @@ app.post('/api/debug-password', (req, res) => {
             });
         });
     });
+});
+
+// Sirve cliente.html
+app.get('/cliente.html', verifyToken, (req, res) => {
+    if (req.user.role !== 'cliente') {
+        return res.status(403).json({ message: 'Acceso denegado: se requiere rol de cliente' });
+    }
+    res.sendFile(path.join(__dirname, 'public', 'cliente.html'));
 });
 
 const PORT = 3000;

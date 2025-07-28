@@ -1,12 +1,110 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-    <h1>HOLA xD</h1>
+    <title>RAHEL - Cliente</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    
+    <header>
+        <div class="top-bar">
+            <div class="left">
+                <h1 class="brand-name">RAHEL</h1>
+                <input type="search" id="searchInput" placeholder="Buscar productos...">
+            </div>
+            <div class="right">
+                <span id="userGreeting" class="auth-link"></span>
+                <a href="#" id="logoutLink" class="auth-link">Cerrar sesión</a>
+            </div>
+        </div>
+        <nav class="main-nav">
+            <ul>
+                <li><a href="#">Inicio</a></li>
+                <li><a href="#">Marcas</a></li>
+                <li><a href="#">Nuevo</a></li>
+                <li><a href="#">Hombres</a></li>
+                <li><a href="#">Mujeres</a></li>
+                <li><a href="#">Niños</a></li>
+                <li><a href="#">Calzados</a></li>
+                <li><a href="#">Ropa</a></li>
+                <li><a href="#">Accesorios</a></li>
+                <li><a href="#">Más categorías</a></li>
+                <li><a href="#">Ofertas</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <div class="container">
+        <h2>Productos</h2>
+        <div class="loading-message" id="loadingMessage">Cargando productos...</div>
+        <div class="product-grid products" id="productGrid"></div>
+        <div class="empty-message" id="emptyMessage" style="display: none;">No hay productos disponibles.</div>
+        <div class="error-message" id="errorMessage" style="display: none;">Error al cargar los productos.</div>
+    </div>
+
+    <script>
+        // Cargar nombre del usuario desde localStorage
+        const userName = localStorage.getItem('userName') || 'Cliente';
+        document.getElementById('userGreeting').textContent = `Hola, ${userName}`;
+
+        // Manejar cierre de sesión
+        document.getElementById('logoutLink').addEventListener('click', (e) => {
+            e.preventDefault();
+            localStorage.removeItem('userName');
+            window.location.href = '/';
+        });
+
+        // Cargar productos
+        const productGrid = document.getElementById('productGrid');
+        const loadingMessage = document.getElementById('loadingMessage');
+        const emptyMessage = document.getElementById('emptyMessage');
+        const errorMessage = document.getElementById('errorMessage');
+        const searchInput = document.getElementById('searchInput');
+
+        async function loadProducts(searchTerm = '') {
+            try {
+                loadingMessage.style.display = 'block';
+                emptyMessage.style.display = 'none';
+                errorMessage.style.display = 'none';
+                productGrid.innerHTML = '';
+
+                const url = searchTerm ? `/products?search=${encodeURIComponent(searchTerm)}` : '/products';
+                const response = await fetch(url);
+                const products = await response.json();
+
+                loadingMessage.style.display = 'none';
+
+                if (products.length === 0) {
+                    emptyMessage.style.display = 'block';
+                    return;
+                }
+
+                products.forEach(product => {
+                    const productCard = document.createElement('div');
+                    productCard.className = 'product-card';
+                    productCard.innerHTML = `
+                        ${product.image ? `<img src="${product.image}" alt="${product.name}">` : ''}
+                        <h3>${product.name}</h3>
+                        <div class="price">$${product.price}</div>
+                    `;
+                    productGrid.appendChild(productCard);
+                });
+            } catch (error) {
+                console.error('Error al cargar productos:', error);
+                loadingMessage.style.display = 'none';
+                errorMessage.style.display = 'block';
+            }
+        }
+
+        // Cargar productos al iniciar
+        loadProducts();
+
+        // Búsqueda en tiempo real
+        searchInput.addEventListener('input', () => {
+            const searchTerm = searchInput.value.trim();
+            loadProducts(searchTerm);
+        });
+    </script>
 </body>
 </html>
