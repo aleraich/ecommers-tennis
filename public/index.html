@@ -69,6 +69,8 @@
     </div>
 
     <script>
+        const BASE_URL = window.location.origin;
+
         // Funciones para abrir y cerrar modal
         const modal = document.getElementById('modal');
         const loginForm = document.getElementById('loginForm');
@@ -83,7 +85,7 @@
         const brandLink = document.getElementById('brandLink');
         const sectionTitle = document.getElementById('sectionTitle');
         let currentCategory = '';
-        let currentSort = 'newest'; // Por defecto, muestra productos recientes
+        let currentSort = 'newest';
 
         // Verificar si hay un usuario autenticado
         function checkAuth() {
@@ -161,7 +163,7 @@
             const password = document.getElementById('loginPassword').value;
 
             try {
-                const response = await fetch('http://localhost:3000/api/login', {
+                const response = await fetch(`${BASE_URL}/api/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, password })
@@ -199,7 +201,7 @@
             const password = document.getElementById('registerPassword').value;
 
             try {
-                const response = await fetch('http://localhost:3000/api/register', {
+                const response = await fetch(`${BASE_URL}/api/register`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name, email, password })
@@ -235,7 +237,7 @@
                 emptyMessage.style.display = 'none';
                 productGrid.innerHTML = '';
 
-                let url = new URL('http://localhost:3000/products');
+                let url = new URL(`${BASE_URL}/products`);
                 const params = new URLSearchParams();
                 if (query) params.append('search', query);
                 if (category) params.append('category', category);
@@ -262,23 +264,27 @@
             }
         }
 
-       function renderProducts(products) {
-    const productGrid = document.getElementById('productGrid');
-    productGrid.innerHTML = '';
-    products.forEach(({ name, price, media }) => {
-        const card = document.createElement('div');
-        card.className = 'product-card';
-        const mediaElement = media && (media.endsWith('.mp4') || media.endsWith('.webm')) ?
-            `<video src="${media}" alt="${name}" width="250" controls></video>` :
-            `<img src="${media || 'https://via.placeholder.com/250'}" alt="${name}" />`;
-        card.innerHTML = `
-            ${mediaElement}
-            <h3>${name}</h3>
-            <p class="price">$${price}</p>
-        `;
-        productGrid.appendChild(card);
-    });
-}
+        function renderProducts(products) {
+            const productGrid = document.getElementById('productGrid');
+            productGrid.innerHTML = '';
+            products.forEach(({ id, name, price, media }) => {
+                const card = document.createElement('div');
+                card.className = 'product-card';
+                card.style.cursor = 'pointer';
+                const mediaElement = media && (media.endsWith('.mp4') || media.endsWith('.webm')) ?
+                    `<video src="${media}" alt="${name}" width="250" controls></video>` :
+                    `<img src="${media || 'https://via.placeholder.com/250'}" alt="${name}" />`;
+                card.innerHTML = `
+                    ${mediaElement}
+                    <h3>${name}</h3>
+                    <p class="price">$${price}</p>
+                `;
+                card.addEventListener('click', () => {
+                    window.location.href = `/product-detail.html?id=${id}`;
+                });
+                productGrid.appendChild(card);
+            });
+        }
 
         // Manejar clic en el logo RAHEL
         brandLink.addEventListener('click', (e) => {
@@ -299,7 +305,7 @@
                 navLinks.forEach(l => l.classList.remove('active'));
                 link.classList.add('active');
                 currentCategory = link.dataset.category || '';
-                currentSort = ''; // Desactiva orden por newest al seleccionar categoría
+                currentSort = '';
                 sectionTitle.textContent = currentCategory || 'Productos';
                 loadProducts(document.getElementById('searchInput').value, currentCategory);
             });
@@ -312,4 +318,4 @@
         });
     </script>
 </body>
-</html> 
+</html>

@@ -69,6 +69,8 @@
     </div>
 
     <script>
+        const BASE_URL = 'http://localhost:3000';
+
         // Funciones para abrir y cerrar modal
         const modal = document.getElementById('modal');
         const loginForm = document.getElementById('loginForm');
@@ -83,7 +85,7 @@
         const brandLink = document.getElementById('brandLink');
         const sectionTitle = document.getElementById('sectionTitle');
         let currentCategory = '';
-        let currentSort = 'newest'; // Por defecto, muestra productos recientes
+        let currentSort = 'newest';
 
         // Verificar si hay un usuario autenticado
         function checkAuth() {
@@ -106,12 +108,13 @@
                 btnLogout.style.display = 'none';
                 userGreeting.style.display = 'none';
                 adminLink.style.display = 'none';
-                window.location.href = '/'; // Redirige si no está autenticado
+                window.location.href = '/';
             }
         }
 
         // Llamar a checkAuth al cargar la página
         document.addEventListener('DOMContentLoaded', () => {
+            console.log('[Client] Cargando cliente.html');
             checkAuth();
             loadProducts();
         });
@@ -158,7 +161,8 @@
             const password = document.getElementById('loginPassword').value;
 
             try {
-                const response = await fetch('http://localhost:3000/api/login', {
+                console.log('[Client] Iniciando sesión con email:', email);
+                const response = await fetch(`${BASE_URL}/api/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, password })
@@ -179,12 +183,14 @@
                         loginError.textContent = 'Rol no reconocido';
                     }
                 } else {
+                    console.error('[Client] Error en login:', data.message);
                     loginError.style.display = 'block';
                     loginError.textContent = data.message || 'Error al iniciar sesión';
                 }
             } catch (error) {
+                console.error('[Client] Error en login:', error.message);
                 loginError.style.display = 'block';
-                loginError.textContent = 'Error de conexión con el servidor';
+                loginError.textContent = 'Error de conexión con el servidor: ' + error.message;
             }
         });
 
@@ -196,7 +202,8 @@
             const password = document.getElementById('registerPassword').value;
 
             try {
-                const response = await fetch('http://localhost:3000/api/register', {
+                console.log('[Client] Registrando usuario:', name, email);
+                const response = await fetch(`${BASE_URL}/api/register`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name, email, password })
@@ -209,12 +216,14 @@
                     registerForm.style.display = 'none';
                     registerError.style.display = 'none';
                 } else {
+                    console.error('[Client] Error en registro:', data.message);
                     registerError.style.display = 'block';
                     registerError.textContent = data.message || 'Error al registrarse';
                 }
             } catch (error) {
+                console.error('[Client] Error en registro:', error.message);
                 registerError.style.display = 'block';
-                registerError.textContent = 'Error de conexión con el servidor';
+                registerError.textContent = 'Error de conexión con el servidor: ' + error.message;
             }
         });
 
@@ -232,19 +241,20 @@
                 emptyMessage.style.display = 'none';
                 productGrid.innerHTML = '';
 
-                let url = new URL('http://localhost:3000/products');
+                let url = new URL(`${BASE_URL}/products`);
                 const params = new URLSearchParams();
                 if (query) params.append('search', query);
                 if (category) params.append('category', category);
                 if (sort) params.append('sort', sort);
                 url.search = params.toString();
 
+                console.log('[Client] Cargando productos desde:', url.toString());
                 const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
                 const response = await fetch(url, { method: 'GET', headers });
-                if (!response.ok) throw new Error(`Error ${response.status}: ${response.statusText}`);
+                if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
 
                 const products = await response.json();
-                console.log('Productos cargados:', products); // Depuración
+                console.log('[Client] Productos recibidos:', products);
                 loadingMessage.style.display = 'none';
 
                 if (!products || products.length === 0) {
@@ -253,7 +263,7 @@
                 }
                 renderProducts(products);
             } catch (err) {
-                console.error('Error al cargar productos:', err);
+                console.error('[Client] Error al cargar productos:', err.message);
                 loadingMessage.style.display = 'none';
                 errorMessage.style.display = 'block';
                 errorMessage.textContent = `Error al cargar productos: ${err.message}`;
@@ -263,17 +273,27 @@
         function renderProducts(products) {
             const productGrid = document.getElementById('productGrid');
             productGrid.innerHTML = '';
-            products.forEach(({ name, price, media }) => {
+            products.forEach(({ id, name, price, media }) => {
+                if (!id) {
+                    console.error('[Client] Producto sin ID:', { name, price, media });
+                    return;
+                }
+                console.log(`[Client] Renderizando producto ID: ${id}, Nombre: ${name}`);
                 const card = document.createElement('div');
                 card.className = 'product-card';
+                card.style.cursor = 'pointer';
                 const mediaElement = media && (media.endsWith('.mp4') || media.endsWith('.webm')) ?
-                    `<video src="${media}" alt="${name}" width="250" controls></video>` :
-                    `<img src="${media || 'https://via.placeholder.com/250'}" alt="${name}" onerror="this.src='https://via.placeholder.com/250'; this.alt='Error al cargar imagen'; console.log('Error cargando imagen: ${media}');">`;
+                    `<video src="${media}" alt="${name}" width="250" controls onerror="console.error('Error al cargar video:', '${media}');"></video>` :
+                    `<img src="${media || 'https://via.placeholder.com/250'}" alt="${name}" onerror="console.error('Error al cargar imagen:', '${media}'); this.src='https://via.placeholder.com/250';">`;
                 card.innerHTML = `
                     ${mediaElement}
                     <h3>${name}</h3>
                     <p class="price">$${price}</p>
                 `;
+                card.addEventListener('click', () => {
+                    console.log(`[Client] Redirigiendo a /product-detail.html?id=${id}`);
+                    window.location.href = `/product-detail.html?id=${id}`;
+                });
                 productGrid.appendChild(card);
             });
         }
@@ -297,7 +317,7 @@
                 navLinks.forEach(l => l.classList.remove('active'));
                 link.classList.add('active');
                 currentCategory = link.dataset.category || '';
-                currentSort = ''; // Desactiva orden por newest al seleccionar categoría
+                currentSort = '';
                 sectionTitle.textContent = currentCategory || 'Productos';
                 loadProducts(document.getElementById('searchInput').value, currentCategory);
             });
