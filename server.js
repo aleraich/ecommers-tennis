@@ -8,7 +8,7 @@ const multer = require('multer');
 const fs = require('fs');
 
 const app = express();
-const JWT_SECRET = process.env.JWT_SECRET || 'tu_secreto_super_seguro';
+const JWT_SECRET = process.env.JWT_SECRET || 'x7k9m2p8q3z5w1r4t6y';
 
 // Configuración de Multer para subir archivos
 const storage = multer.diskStorage({
@@ -16,6 +16,10 @@ const storage = multer.diskStorage({
         cb(null, 'public/uploads/');
     },
     filename: (req, file, cb) => {
+        if (!file || !file.originalName) {
+            console.log('No se proporcionó archivo válido en filename');
+            return cb(null, 'no-file-' + Date.now()); // Nombre por defecto si no hay archivo
+        }
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
         cb(null, uniqueSuffix + path.extname(file.originalName));
     }
@@ -23,12 +27,18 @@ const storage = multer.diskStorage({
 const upload = multer({
     storage,
     fileFilter: (req, file, cb) => {
+        if (!file || !file.originalName) {
+            console.log('No se proporcionó archivo o file.originalName es undefined');
+            return cb(null, true); // Permitir solicitudes sin archivo
+        }
         const fileTypes = /jpeg|jpg|png|mp4|webm/;
         const extname = fileTypes.test(path.extname(file.originalName).toLowerCase());
         const mimetype = fileTypes.test(file.mimetype);
         if (extname && mimetype) {
+            console.log(`Archivo válido: ${file.originalName}, mimetype: ${file.mimetype}`);
             return cb(null, true);
         } else {
+            console.log(`Archivo inválido: ${file.originalName}, mimetype: ${file.mimetype}`);
             cb(new Error('Solo se permiten imágenes (JPEG, PNG) y videos (MP4, WEBM)'));
         }
     },
@@ -39,7 +49,7 @@ const upload = multer({
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 
 // Middleware para verificar JWT
 const verifyToken = (req, res, next) => {
@@ -77,25 +87,35 @@ app.get('/cliente.html', verifyToken, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'cliente.html'));
 });
 
-// Conexión a BD MySQL (Aiven)
-const db = mysql.createConnection({
-    host: process.env.DB_HOST || 'mysql-ecommers-ecommers-tennis.c.aivencloud.com',
-    port: process.env.DB_PORT || 16216,
-    user: process.env.DB_USER || 'avnadmin',
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME || 'ecommers_tennis',
-    ssl: {
-        ca: fs.readFileSync(path.join(__dirname, 'ca.pem'))
-    }
-});
+// Conexión a BD MySQL (Aiven o local)
+const isLocal = process.env.DB_ENV === 'local';
+const dbConfig = isLocal
+    ? {
+          host: process.env.DB_HOST || 'localhost',
+          port: process.env.DB_PORT || 3306,
+          user: process.env.DB_USER || 'root',
+          password: process.env.DB_PASSWORD || '',
+          database: process.env.DB_NAME || 'ecommers_tennis'
+      }
+    : {
+          host: process.env.DB_HOST || 'mysql-ecommers-ecommers-tennis.c.aivencloud.com',
+          port: process.env.DB_PORT || 16216,
+          user: process.env.DB_USER || 'avnadmin',
+          password: process.env.DB_PASSWORD,
+          database: process.env.DB_NAME || 'ecommers_tennis',
+          ssl: {
+              ca: fs.readFileSync(path.join(__dirname, 'ca.pem'))
+          }
+      };
+
+const db = mysql.createConnection(dbConfig);
 
 db.connect((err) => {
     if (err) {
         console.error('Error al conectar a la base de datos:', err.message);
         process.exit(1);
     }
-    console.log('Conectado a la base de datos Aiven MySQL');
-    // Verificar tabla products
+    console.log(`Conectado a la base de datos ${isLocal ? 'local (XAMPP)' : 'Aiven MySQL'}`);
     db.query('SELECT COUNT(*) AS count FROM products', (err, results) => {
         if (err) {
             console.error('Error al verificar tabla products:', err.message);
@@ -238,6 +258,7 @@ app.get('/api/product/:id', (req, res) => {
 
 // Añadir producto (protegido)
 app.post('/admin/products', verifyToken, verifyAdmin, upload.single('media'), (req, res) => {
+    console.log('Datos recibidos:', req.body, 'Archivo:', req.file); // Depuración
     const { name, price, description, category } = req.body;
     if (!name || !price) {
         return res.status(400).json({ message: 'Nombre y precio son requeridos' });
@@ -250,6 +271,7 @@ app.post('/admin/products', verifyToken, verifyAdmin, upload.single('media'), (r
             console.error('Error al añadir el producto:', err.message);
             return res.status(500).json({ message: 'Error al añadir el producto en la base de datos', error: err.message });
         }
+        console.log(`Producto añadido con ID: ${result.insertId}`);
         res.json({ message: 'Producto añadido', id: result.insertId });
     });
 });
