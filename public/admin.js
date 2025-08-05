@@ -76,6 +76,8 @@ document.addEventListener('DOMContentLoaded', () => {
             emptyMessage.style.display = 'none';
             productList.innerHTML = '';
 
+            console.log(`Solicitando productos a ${API_URL}/products con token: ${token.substring(0, 10)}...`);
+
             const response = await fetch(`${API_URL}/products`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -121,7 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Error al cargar productos:', err);
             loadingMessage.style.display = 'none';
             errorMessage.style.display = 'block';
-            errorMessage.textContent = err.message;
+            errorMessage.textContent = `Error al cargar productos: ${err.message}`;
         } finally {
             isLoading = false;
         }

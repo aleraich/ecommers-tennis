@@ -13,32 +13,38 @@ const JWT_SECRET = process.env.JWT_SECRET || 'x7k9m2p8q3z5w1r4t6y';
 // Configuración de Multer para subir archivos
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, 'public/uploads/');
+        const uploadPath = path.join(__dirname, 'public/uploads');
+        fs.mkdirSync(uploadPath, { recursive: true }); // Asegura que la carpeta exista
+        cb(null, uploadPath);
     },
     filename: (req, file, cb) => {
-        if (!file || !file.originalName) {
+        if (!file || !file.originalname) {
             console.log('No se proporcionó archivo válido en filename');
-            return cb(null, 'no-file-' + Date.now()); // Nombre por defecto si no hay archivo
+            return cb(null, 'no-file-' + Date.now());
         }
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, uniqueSuffix + path.extname(file.originalName));
+        cb(null, uniqueSuffix + path.extname(file.originalname));
     }
 });
 const upload = multer({
     storage,
     fileFilter: (req, file, cb) => {
-        if (!file || !file.originalName) {
-            console.log('No se proporcionó archivo o file.originalName es undefined');
-            return cb(null, true); // Permitir solicitudes sin archivo
+        if (!file) {
+            console.log('No se proporcionó archivo');
+            return cb(null, true);
+        }
+        if (!file.originalname) {
+            console.log('file.originalname es undefined');
+            return cb(null, true);
         }
         const fileTypes = /jpeg|jpg|png|mp4|webm/;
-        const extname = fileTypes.test(path.extname(file.originalName).toLowerCase());
+        const extname = fileTypes.test(path.extname(file.originalname).toLowerCase());
         const mimetype = fileTypes.test(file.mimetype);
         if (extname && mimetype) {
-            console.log(`Archivo válido: ${file.originalName}, mimetype: ${file.mimetype}`);
+            console.log(`Archivo válido: ${file.originalname}, mimetype: ${file.mimetype}`);
             return cb(null, true);
         } else {
-            console.log(`Archivo inválido: ${file.originalName}, mimetype: ${file.mimetype}`);
+            console.log(`Archivo inválido: ${file.originalname}, mimetype: ${file.mimetype}`);
             cb(new Error('Solo se permiten imágenes (JPEG, PNG) y videos (MP4, WEBM)'));
         }
     },
@@ -203,7 +209,7 @@ app.post('/api/register', (req, res) => {
 app.get('/products', (req, res) => {
     const { search, category, sort } = req.query;
     let query = 'SELECT id, name, price, CASE WHEN media IS NOT NULL THEN CONCAT(?, media) ELSE NULL END AS media, description, category, created_at FROM products';
-    let params = [process.env.APP_URL || 'http://localhost:3000'];
+    let params = [process.env.APP_URL || 'https://rahel-app.onrender.com'];
     let conditions = [];
 
     if (search) {
@@ -220,6 +226,8 @@ app.get('/products', (req, res) => {
     if (sort === 'newest') {
         query += ' ORDER BY created_at DESC';
     }
+
+    console.log('Ejecutando consulta de productos:', query, 'Parámetros:', params);
 
     db.query(query, params, (err, results) => {
         if (err) {
@@ -240,7 +248,7 @@ app.get('/api/product/:id', (req, res) => {
         return res.status(400).json({ message: 'ID de producto inválido' });
     }
     const query = 'SELECT id, name, price, CASE WHEN media IS NOT NULL THEN CONCAT(?, media) ELSE NULL END AS media, description, category, created_at FROM products WHERE id = ?';
-    const params = [process.env.APP_URL || 'http://localhost:3000', productId];
+    const params = [process.env.APP_URL || 'https://rahel-app.onrender.com', productId];
 
     db.query(query, params, (err, results) => {
         if (err) {
@@ -258,7 +266,7 @@ app.get('/api/product/:id', (req, res) => {
 
 // Añadir producto (protegido)
 app.post('/admin/products', verifyToken, verifyAdmin, upload.single('media'), (req, res) => {
-    console.log('Datos recibidos:', req.body, 'Archivo:', req.file); // Depuración
+    console.log('Datos recibidos:', req.body, 'Archivo:', req.file);
     const { name, price, description, category } = req.body;
     if (!name || !price) {
         return res.status(400).json({ message: 'Nombre y precio son requeridos' });
