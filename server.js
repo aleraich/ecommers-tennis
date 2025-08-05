@@ -14,8 +14,14 @@ const JWT_SECRET = process.env.JWT_SECRET || 'x7k9m2p8q3z5w1r4t6y';
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         const uploadPath = path.join(__dirname, 'public/uploads');
-        fs.mkdirSync(uploadPath, { recursive: true }); // Asegura que la carpeta exista
-        cb(null, uploadPath);
+        try {
+            fs.mkdirSync(uploadPath, { recursive: true });
+            console.log(`Carpeta de uploads creada o existente: ${uploadPath}`);
+            cb(null, uploadPath);
+        } catch (err) {
+            console.error('Error al crear carpeta de uploads:', err.message);
+            cb(err);
+        }
     },
     filename: (req, file, cb) => {
         if (!file || !file.originalname) {
@@ -30,7 +36,7 @@ const upload = multer({
     storage,
     fileFilter: (req, file, cb) => {
         if (!file) {
-            console.log('No se proporcionó archivo');
+            console.log('No se proporcionó archivo en fileFilter');
             return cb(null, true);
         }
         if (!file.originalname) {
@@ -49,7 +55,7 @@ const upload = multer({
         }
     },
     limits: { fileSize: 50 * 1024 * 1024 }
-});
+}).single('media');
 
 // Middleware
 app.use(cors());
@@ -110,16 +116,25 @@ const dbConfig = isLocal
           password: process.env.DB_PASSWORD,
           database: process.env.DB_NAME || 'ecommers_tennis',
           ssl: {
-              ca: fs.readFileSync(path.join(__dirname, 'ca.pem'))
+              ca: fs.existsSync(path.join(__dirname, 'ca.pem')) ? fs.readFileSync(path.join(__dirname, 'ca.pem')) : undefined
           }
       };
+
+console.log('Configuración de la base de datos:', {
+    host: dbConfig.host,
+    port: dbConfig.port,
+    user: dbConfig.user,
+    database: dbConfig.database,
+    ssl: !!dbConfig.ssl
+});
 
 const db = mysql.createConnection(dbConfig);
 
 db.connect((err) => {
     if (err) {
         console.error('Error al conectar a la base de datos:', err.message);
-        process.exit(1);
+        console.error('Detalles del error:', err);
+        return; // No usar process.exit(1) para permitir que el servidor siga corriendo
     }
     console.log(`Conectado a la base de datos ${isLocal ? 'local (XAMPP)' : 'Aiven MySQL'}`);
     db.query('SELECT COUNT(*) AS count FROM products', (err, results) => {
@@ -265,22 +280,32 @@ app.get('/api/product/:id', (req, res) => {
 });
 
 // Añadir producto (protegido)
-app.post('/admin/products', verifyToken, verifyAdmin, upload.single('media'), (req, res) => {
-    console.log('Datos recibidos:', req.body, 'Archivo:', req.file);
-    const { name, price, description, category } = req.body;
-    if (!name || !price) {
-        return res.status(400).json({ message: 'Nombre y precio son requeridos' });
-    }
-
-    const media = req.file ? `/uploads/${req.file.filename}` : null;
-    const query = 'INSERT INTO products (name, price, media, description, category) VALUES (?, ?, ?, ?, ?)';
-    db.query(query, [name, price, media, description || null, category || null], (err, result) => {
-        if (err) {
-            console.error('Error al añadir el producto:', err.message);
-            return res.status(500).json({ message: 'Error al añadir el producto en la base de datos', error: err.message });
+app.post('/admin/products', verifyToken, verifyAdmin, (req, res, next) => {
+    upload(req, res, (err) => {
+        if (err instanceof multer.MulterError) {
+            console.error('Error de Multer:', err.message);
+            return res.status(400).json({ message: 'Error al procesar el archivo', error: err.message });
+        } else if (err) {
+            console.error('Error en fileFilter:', err.message);
+            return res.status(400).json({ message: err.message });
         }
-        console.log(`Producto añadido con ID: ${result.insertId}`);
-        res.json({ message: 'Producto añadido', id: result.insertId });
+
+        console.log('Datos recibidos:', req.body, 'Archivo:', req.file);
+        const { name, price, description, category } = req.body;
+        if (!name || !price) {
+            return res.status(400).json({ message: 'Nombre y precio son requeridos' });
+        }
+
+        const media = req.file ? `/uploads/${req.file.filename}` : null;
+        const query = 'INSERT INTO products (name, price, media, description, category) VALUES (?, ?, ?, ?, ?)';
+        db.query(query, [name, price, media, description || null, category || null], (err, result) => {
+            if (err) {
+                console.error('Error al añadir el producto:', err.message);
+                return res.status(500).json({ message: 'Error al añadir el producto en la base de datos', error: err.message });
+            }
+            console.log(`Producto añadido con ID: ${result.insertId}`);
+            res.json({ message: 'Producto añadido', id: result.insertId });
+        });
     });
 });
 
@@ -341,5 +366,9 @@ app.post('/api/debug-password', (req, res) => {
     });
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Servidor en http://localhost:${PORT}`));
+// Verificar que el servidor inicie
+app.listen(process.env.PORT || 3000, () => {
+    console.log(`Servidor iniciado en puerto ${process.env.PORT || 3000}`);
+}).on('error', (err) => {
+    console.error('Error al iniciar el servidor:', err.message);
+});
