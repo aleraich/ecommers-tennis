@@ -5,9 +5,10 @@ const path = require('path');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const multer = require('multer');
+const fs = require('fs');
 
 const app = express();
-const JWT_SECRET = 'tu_secreto_super_seguro';
+const JWT_SECRET = process.env.JWT_SECRET || 'tu_secreto_super_seguro';
 
 // Configuración de Multer para subir archivos
 const storage = multer.diskStorage({
@@ -16,14 +17,14 @@ const storage = multer.diskStorage({
     },
     filename: (req, file, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, uniqueSuffix + path.extname(file.originalname));
+        cb(null, uniqueSuffix + path.extname(file.originalName));
     }
 });
 const upload = multer({
     storage,
     fileFilter: (req, file, cb) => {
         const fileTypes = /jpeg|jpg|png|mp4|webm/;
-        const extname = fileTypes.test(path.extname(file.originalname).toLowerCase());
+        const extname = fileTypes.test(path.extname(file.originalName).toLowerCase());
         const mimetype = fileTypes.test(file.mimetype);
         if (extname && mimetype) {
             return cb(null, true);
@@ -38,6 +39,7 @@ const upload = multer({
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Middleware para verificar JWT
 const verifyToken = (req, res, next) => {
@@ -75,12 +77,16 @@ app.get('/cliente.html', verifyToken, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'cliente.html'));
 });
 
-// Conexión a BD MySQL
+// Conexión a BD MySQL (Aiven)
 const db = mysql.createConnection({
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'mi_stockx_db'
+    host: process.env.DB_HOST || 'mysql-ecommers-ecommers-tennis.c.aivencloud.com',
+    port: process.env.DB_PORT || 16216,
+    user: process.env.DB_USER || 'avnadmin',
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME || 'ecommers_tennis',
+    ssl: {
+        ca: fs.readFileSync(path.join(__dirname, 'ca.pem'))
+    }
 });
 
 db.connect((err) => {
@@ -88,7 +94,7 @@ db.connect((err) => {
         console.error('Error al conectar a la base de datos:', err.message);
         process.exit(1);
     }
-    console.log('Conectado a la base de datos MySQL');
+    console.log('Conectado a la base de datos Aiven MySQL');
     // Verificar tabla products
     db.query('SELECT COUNT(*) AS count FROM products', (err, results) => {
         if (err) {
@@ -177,7 +183,7 @@ app.post('/api/register', (req, res) => {
 app.get('/products', (req, res) => {
     const { search, category, sort } = req.query;
     let query = 'SELECT id, name, price, CASE WHEN media IS NOT NULL THEN CONCAT(?, media) ELSE NULL END AS media, description, category, created_at FROM products';
-    let params = ['http://localhost:3000'];
+    let params = [process.env.APP_URL || 'http://localhost:3000'];
     let conditions = [];
 
     if (search) {
@@ -214,7 +220,7 @@ app.get('/api/product/:id', (req, res) => {
         return res.status(400).json({ message: 'ID de producto inválido' });
     }
     const query = 'SELECT id, name, price, CASE WHEN media IS NOT NULL THEN CONCAT(?, media) ELSE NULL END AS media, description, category, created_at FROM products WHERE id = ?';
-    const params = ['http://localhost:3000', productId];
+    const params = [process.env.APP_URL || 'http://localhost:3000', productId];
 
     db.query(query, params, (err, results) => {
         if (err) {
@@ -266,7 +272,6 @@ app.delete('/admin/products/:id', verifyToken, verifyAdmin, (req, res) => {
                 return res.status(404).json({ message: 'Producto no encontrado' });
             }
             if (media && media.startsWith('/uploads/')) {
-                const fs = require('fs');
                 const filePath = path.join(__dirname, 'public', media);
                 fs.unlink(filePath, (err) => {
                     if (err && err.code !== 'ENOENT') {
