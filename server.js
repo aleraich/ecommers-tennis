@@ -23,67 +23,75 @@ const oauth2Client = new OAuth2Client(
 );
 
 let drive;
-try {
-    console.log('Inicializando Google Drive API con OAuth...');
-    const clientSecretPath = path.join(__dirname, 'client_secret_706462521119-0ur4vghsdphcg3bcutksoj5lc4vhn0gu.apps.googleusercontent.com.json');
-    const credentialsPath = path.join(__dirname, 'credentials.json');
-    let tokens = fs.existsSync(credentialsPath) ? JSON.parse(fs.readFileSync(credentialsPath)) : {};
+async function initializeDrive() {
+    try {
+        console.log('Inicializando Google Drive API con OAuth...');
+        const clientSecretPath = path.join(__dirname, 'client_secret_706462521119-0ur4vghsdphcg3bcutksoj5lc4vhn0gu.apps.googleusercontent.com.json');
+        const credentialsPath = path.join(__dirname, 'credentials.json');
+        let tokens = fs.existsSync(credentialsPath) ? JSON.parse(fs.readFileSync(credentialsPath)) : {};
 
-    if (!tokens.refresh_token && !tokens.access_token) {
-        console.log('No se encontraron tokens válidos. Completa el flujo OAuth en http://localhost:3000/auth/google.');
-    } else {
+        if (!tokens.refresh_token && !tokens.access_token) {
+            console.log('No se encontraron tokens válidos. Completa el flujo OAuth en http://localhost:3000/auth/google.');
+            return null;
+        }
+
         oauth2Client.setCredentials(tokens);
         console.log('Credenciales cargadas desde credentials.json:', tokens.access_token ? 'con access_token' : 'sin access_token');
-    }
 
-    drive = google.drive({ version: 'v3', auth: oauth2Client });
-
-    // Configurar renovación automática de tokens
-    oauth2Client.on('tokens', (newTokens) => {
-        if (newTokens && newTokens.token) {
-            const updatedTokens = {
-                access_token: newTokens.token.access_token,
-                refresh_token: newTokens.token.refresh_token || tokens.refresh_token,
-                expiry_date: newTokens.token.expiry_date,
-            };
-            if (updatedTokens.access_token) {
-                tokens.access_token = updatedTokens.access_token;
-                console.log('Nuevo access token guardado:', updatedTokens.access_token);
+        // Configurar el evento "tokens" antes de cualquier operación
+        oauth2Client.on('tokens', (newTokens) => {
+            if (newTokens && (newTokens.access_token || newTokens.refresh_token)) {
+                const updatedTokens = {
+                    access_token: newTokens.access_token || tokens.access_token,
+                    refresh_token: newTokens.refresh_token || tokens.refresh_token,
+                    expiry_date: newTokens.expiry_date,
+                };
+                if (updatedTokens.access_token) {
+                    tokens.access_token = updatedTokens.access_token;
+                    console.log('Nuevo access token guardado:', updatedTokens.access_token);
+                }
+                if (updatedTokens.refresh_token) {
+                    tokens.refresh_token = updatedTokens.refresh_token;
+                    console.log('Nuevo refresh token guardado:', updatedTokens.refresh_token);
+                }
+                if (updatedTokens.expiry_date) {
+                    tokens.expiry_date = updatedTokens.expiry_date;
+                }
+                if (Object.keys(tokens).length > 0) {
+                    try {
+                        fs.writeFileSync(credentialsPath, JSON.stringify(tokens, null, 2));
+                        oauth2Client.setCredentials(tokens);
+                        console.log('Tokens actualizados y guardados en credentials.json');
+                    } catch (err) {
+                        console.error('Error al guardar tokens en credentials.json:', err.message);
+                    }
+                }
+            } else {
+                console.warn('Tokens no recibidos correctamente en el evento "tokens". Verifica la autenticación.');
             }
-            if (updatedTokens.refresh_token) {
-                tokens.refresh_token = updatedTokens.refresh_token;
-                console.log('Nuevo refresh token guardado:', updatedTokens.refresh_token);
-            }
-            if (updatedTokens.expiry_date) {
-                tokens.expiry_date = updatedTokens.expiry_date;
-            }
-            if (Object.keys(tokens).length > 0) {
-                fs.writeFileSync(credentialsPath, JSON.stringify(tokens, null, 2));
-                oauth2Client.setCredentials(tokens);
-                console.log('Tokens actualizados y guardados en credentials.json');
-            }
-        } else {
-            console.warn('Tokens no recibidos correctamente en el evento "tokens". Verifica la autenticación.');
-        }
-    });
-
-    // Forzar renovación si el token está expirado
-    if (tokens.expiry_date && Date.now() >= tokens.expiry_date) {
-        console.log('Token expirado, intentando renovar...');
-        oauth2Client.refreshAccessToken().then((res) => {
-            oauth2Client.setCredentials(res.credentials);
-            fs.writeFileSync(credentialsPath, JSON.stringify(res.credentials, null, 2));
-            console.log('Token renovado exitosamente:', res.credentials.access_token);
-        }).catch((err) => {
-            console.error('Error al renovar token:', err.message);
         });
-    }
 
-    console.log('Google Drive API inicializada correctamente:', drive ? 'éxito' : 'fallo');
-} catch (err) {
-    console.error('Error al inicializar Google Drive API:', err.message);
-    drive = null; // Evitar que el servidor se caiga si falla la inicialización
+        // Forzar renovación si el token está expirado
+        if (tokens.expiry_date && Date.now() >= tokens.expiry_date) {
+            console.log('Token expirado, intentando renovar...');
+            const { credentials } = await oauth2Client.refreshAccessToken();
+            oauth2Client.setCredentials(credentials);
+            fs.writeFileSync(credentialsPath, JSON.stringify(credentials, null, 2));
+            console.log('Token renovado exitosamente:', credentials.access_token);
+        }
+
+        drive = google.drive({ version: 'v3', auth: oauth2Client });
+        console.log('Google Drive API inicializada correctamente:', drive ? 'éxito' : 'fallo');
+        return drive;
+    } catch (err) {
+        console.error('Error al inicializar Google Drive API:', err.message);
+        drive = null; // Evitar que el servidor se caiga si falla la inicialización
+        return null;
+    }
 }
+
+// Inicializar Drive al arrancar el servidor
+initializeDrive().catch(err => console.error('Error en inicialización de Drive:', err));
 
 const GOOGLE_DRIVE_FOLDER_ID = process.env.GOOGLE_DRIVE_FOLDER_ID || '1CY3Nla2eVN5XN9VcsEI4m6v991yK-iOx';
 
