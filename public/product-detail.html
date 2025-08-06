@@ -30,7 +30,7 @@
 
     <script>
         (function () {
-            const BASE_URL = 'http://localhost:3000';
+            const BASE_URL = window.location.origin; // Cambiado de 'http://localhost:3000' a dinámico
 
             // Obtener el ID del producto de la URL
             const urlParams = new URLSearchParams(window.location.search);
@@ -88,12 +88,14 @@
                     document.getElementById('product-category').textContent = `Categoría: ${product.category || 'Sin categoría'}`;
                     document.getElementById('product-date').textContent = `Creado: ${product.created_at ? new Date(product.created_at).toLocaleDateString() : 'Sin fecha'}`;
 
-                    // Mostrar imagen o video
+                    // Mostrar imagen o video usando el proxy
                     const mediaContainer = document.getElementById('product-media');
+                    const fileId = product.media ? product.media.split('id=')[1] || product.media.match(/\/d\/(.+?)\//)?.[1] : null;
+                    const mediaUrl = fileId ? `${BASE_URL}/proxy/image?id=${fileId}` : 'https://via.placeholder.com/400';
                     if (product.media && (product.media.endsWith('.mp4') || product.media.endsWith('.webm'))) {
-                        mediaContainer.innerHTML = `<video src="${product.media}" class="product-media" controls onerror="console.error('Error al cargar video:', '${product.media}');"></video>`;
+                        mediaContainer.innerHTML = `<video src="${mediaUrl}" class="product-media" controls onerror="console.error('Error al cargar video:', '${mediaUrl}'); this.src='https://via.placeholder.com/400';"></video>`;
                     } else {
-                        mediaContainer.innerHTML = `<img src="${product.media || 'https://via.placeholder.com/400'}" class="product-media" alt="${product.name || 'Producto'}" onerror="console.error('Error al cargar imagen:', '${product.media}'); this.src='https://via.placeholder.com/400';">`;
+                        mediaContainer.innerHTML = `<img src="${mediaUrl}" class="product-media" alt="${product.name || 'Producto'}" onerror="console.error('Error al cargar imagen:', '${mediaUrl}'); this.src='https://via.placeholder.com/400';">`;
                     }
                 } catch (error) {
                     showError(`Error al cargar el producto: ${error.message}`);
@@ -141,12 +143,16 @@
                 cart.forEach(item => {
                     const itemElement = document.createElement('div');
                     itemElement.className = 'cart-item';
+                    // Usar el proxy para las imágenes en el carrito
+                    const fileId = item.media ? item.media.split('id=')[1] || item.media.match(/\/d\/(.+?)\//)?.[1] : null;
+                    const mediaUrl = fileId ? `${BASE_URL}/proxy/image?id=${fileId}` : 'https://via.placeholder.com/80';
                     itemElement.innerHTML = `
-                        <img src="${item.media || 'https://via.placeholder.com/80'}" alt="${item.name}">
+                        <img src="${mediaUrl}" alt="${item.name}">
                         <div class="cart-item-details">
                             <h3>${item.name}</h3>
                             <p class="price">$${item.price}</p>
                             <input type="number" value="${item.quantity}" min="1" data-id="${item.id}">
+                            <button class="remove-item" data-id="${item.id}">Eliminar</button>
                         </div>
                     `;
                     cartItemsContainer.appendChild(itemElement);
@@ -155,12 +161,25 @@
 
                 cartTotal.textContent = `$${total.toFixed(2)}`;
 
-                // Añadir eventos a los inputs de cantidad
+                // Añadir eventos a los inputs de cantidad y botones de eliminar
                 cartItemsContainer.querySelectorAll('input[type="number"]').forEach(input => {
                     input.addEventListener('change', (e) => {
                         updateCartItemQuantity(parseInt(e.target.dataset.id), e.target.value);
                     });
                 });
+
+                cartItemsContainer.querySelectorAll('.remove-item').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        removeFromCart(parseInt(e.target.dataset.id));
+                    });
+                });
+            }
+
+            function removeFromCart(productId) {
+                const cart = getCart();
+                const updatedCart = cart.filter(item => item.id !== productId);
+                saveCart(updatedCart);
+                renderCart();
             }
 
             function openCartPanel() {

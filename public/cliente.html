@@ -14,6 +14,7 @@
                 <input type="search" id="searchInput" placeholder="Buscar productos..." />
             </div>
             <div class="right">
+                <span class="cart-icon" id="cartIcon">&#128722;</span>
                 <span class="auth-link" id="userGreeting" style="display: none;"></span>
                 <span class="auth-link" id="btnLogin">Entrar</span>
                 <span class="auth-link" id="btnRegister">Registrarse</span>
@@ -68,8 +69,17 @@
         </div>
     </div>
 
+    <!-- Panel lateral del carrito -->
+    <div id="cartPanel" class="cart-panel">
+        <span id="closeCart" class="close-cart">&times;</span>
+        <h2>Carrito de compras</h2>
+        <div id="cartItems"></div>
+        <div id="cartTotal" class="cart-total">Total: <span>$0.00</span></div>
+        <a href="#" id="checkoutButton" class="checkout-button">Finalizar compra</a>
+    </div>
+
     <script>
-        const BASE_URL = 'http://localhost:3000';
+        const BASE_URL = window.location.origin;
 
         // Funciones para abrir y cerrar modal
         const modal = document.getElementById('modal');
@@ -84,8 +94,110 @@
         const adminLink = document.getElementById('adminLink');
         const brandLink = document.getElementById('brandLink');
         const sectionTitle = document.getElementById('sectionTitle');
+        const cartIcon = document.getElementById('cartIcon');
+        const cartPanel = document.getElementById('cartPanel');
+        const closeCart = document.getElementById('closeCart');
+        const cartItemsContainer = document.getElementById('cartItems');
+        const cartTotal = document.getElementById('cartTotal').querySelector('span');
+        const checkoutButton = document.getElementById('checkoutButton');
         let currentCategory = '';
         let currentSort = 'newest';
+
+        // Gestión del carrito
+        function getCart() {
+            const cart = localStorage.getItem('cart');
+            return cart ? JSON.parse(cart) : [];
+        }
+
+        function saveCart(cart) {
+            localStorage.setItem('cart', JSON.stringify(cart));
+        }
+
+        function removeFromCart(productId) {
+            const cart = getCart();
+            const updatedCart = cart.filter(item => item.id !== productId);
+            saveCart(updatedCart);
+            renderCart();
+        }
+
+        function updateCartItemQuantity(productId, quantity) {
+            const cart = getCart();
+            const item = cart.find(item => item.id === productId);
+            if (item) {
+                item.quantity = Math.max(1, parseInt(quantity));
+                saveCart(cart);
+                renderCart();
+            }
+        }
+
+        function renderCart() {
+            const cart = getCart();
+            cartItemsContainer.innerHTML = '';
+            let total = 0;
+
+            cart.forEach(item => {
+                const itemElement = document.createElement('div');
+                itemElement.className = 'cart-item';
+                // Usar el proxy para las imágenes en el carrito
+                const fileId = item.media ? item.media.split('id=')[1] || item.media.match(/\/d\/(.+?)\//)?.[1] : null;
+                const mediaUrl = fileId ? `${BASE_URL}/proxy/image?id=${fileId}` : 'https://via.placeholder.com/80';
+                itemElement.innerHTML = `
+                    <img src="${mediaUrl}" alt="${item.name}">
+                    <div class="cart-item-details">
+                        <h3>${item.name}</h3>
+                        <p class="price">$${item.price}</p>
+                        <input type="number" value="${item.quantity}" min="1" data-id="${item.id}">
+                        <button class="remove-item" data-id="${item.id}">Eliminar</button>
+                    </div>
+                `;
+                cartItemsContainer.appendChild(itemElement);
+                total += item.price * item.quantity;
+            });
+
+            cartTotal.textContent = `$${total.toFixed(2)}`;
+
+            // Añadir eventos a los inputs de cantidad y botones de eliminar
+            cartItemsContainer.querySelectorAll('input[type="number"]').forEach(input => {
+                input.addEventListener('change', (e) => {
+                    updateCartItemQuantity(parseInt(e.target.dataset.id), e.target.value);
+                });
+            });
+
+            cartItemsContainer.querySelectorAll('.remove-item').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    removeFromCart(parseInt(e.target.dataset.id));
+                });
+            });
+        }
+
+        function openCartPanel() {
+            cartPanel.classList.add('open');
+        }
+
+        function closeCartPanel() {
+            cartPanel.classList.remove('open');
+        }
+
+        // Eventos del carrito
+        cartIcon.addEventListener('click', () => {
+            renderCart();
+            openCartPanel();
+        });
+
+        closeCart.addEventListener('click', closeCartPanel);
+
+        checkoutButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            const cart = getCart();
+            if (cart.length === 0) {
+                alert('El carrito está vacío');
+            } else {
+                alert('Compra finalizada. Total: ' + cartTotal.textContent);
+                localStorage.removeItem('cart');
+                renderCart();
+                closeCartPanel();
+            }
+        });
 
         // Verificar si hay un usuario autenticado
         function checkAuth() {
@@ -282,9 +394,12 @@
                 const card = document.createElement('div');
                 card.className = 'product-card';
                 card.style.cursor = 'pointer';
+                // Extraer fileId y usar el proxy para las imágenes
+                const fileId = media ? media.split('id=')[1] || media.match(/\/d\/(.+?)\//)?.[1] : null;
+                const mediaUrl = fileId ? `${BASE_URL}/proxy/image?id=${fileId}` : 'https://via.placeholder.com/250';
                 const mediaElement = media && (media.endsWith('.mp4') || media.endsWith('.webm')) ?
-                    `<video src="${media}" alt="${name}" width="250" controls onerror="console.error('Error al cargar video:', '${media}');"></video>` :
-                    `<img src="${media || 'https://via.placeholder.com/250'}" alt="${name}" onerror="console.error('Error al cargar imagen:', '${media}'); this.src='https://via.placeholder.com/250';">`;
+                    `<video src="${mediaUrl}" alt="${name}" width="250" controls onerror="console.error('Error al cargar video:', '${mediaUrl}');"></video>` :
+                    `<img src="${mediaUrl}" alt="${name}" onerror="console.error('Error al cargar imagen:', '${mediaUrl}'); this.src='https://via.placeholder.com/250';">`;
                 card.innerHTML = `
                     ${mediaElement}
                     <h3>${name}</h3>

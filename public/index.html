@@ -138,8 +138,11 @@
             cart.forEach(item => {
                 const itemElement = document.createElement('div');
                 itemElement.className = 'cart-item';
+                // Usar el proxy para las imágenes en el carrito
+                const fileId = item.media ? item.media.split('id=')[1] || item.media.match(/\/d\/(.+?)\//)?.[1] : null;
+                const mediaUrl = fileId ? `${BASE_URL}/proxy/image?id=${fileId}` : 'https://via.placeholder.com/80';
                 itemElement.innerHTML = `
-                    <img src="${item.media || 'https://via.placeholder.com/80'}" alt="${item.name}">
+                    <img src="${mediaUrl}" alt="${item.name}">
                     <div class="cart-item-details">
                         <h3>${item.name}</h3>
                         <p class="price">$${item.price}</p>
@@ -390,9 +393,12 @@
                 const card = document.createElement('div');
                 card.className = 'product-card';
                 card.style.cursor = 'pointer';
+                // Extraer fileId y usar el proxy para las imágenes
+                const fileId = media ? media.split('id=')[1] || media.match(/\/d\/(.+?)\//)?.[1] : null;
+                const mediaUrl = fileId ? `${BASE_URL}/proxy/image?id=${fileId}` : 'https://via.placeholder.com/250';
                 const mediaElement = media && (media.endsWith('.mp4') || media.endsWith('.webm')) ?
-                    `<video src="${media}" alt="${name}" width="250" controls></video>` :
-                    `<img src="${media || 'https://via.placeholder.com/250'}" alt="${name}" />`;
+                    `<video src="${mediaUrl}" alt="${name}" width="250" controls></video>` :
+                    `<img src="${mediaUrl}" alt="${name}" onerror="this.onerror=null; this.src='https://via.placeholder.com/250'; this.alt='Imagen no disponible';">`;
                 card.innerHTML = `
                     ${mediaElement}
                     <h3>${name}</h3>
