@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "ecommers-tennis",
+  "private_key_id": "253aefc2869e122fbe15f71da8b00aab3df12d27",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC3enfBsIbJcY4H\nbrX6gYa4G0YUt8uzesOmbQ0HwDPxFcA3xw7aHZuw0lfzPtH2CGjgzgXpeVgwM8ID\n4eOf8nk4ns/NYUjaNLeA4t36l21m1dkdSIovTT/oFLU6MNXQu1IW6ub+LIkcvedQ\nCHS5fvco1+J2uyXN9JmYSHPoj8oH1y2MPo1zfoYkh1hhGPlcI9d41FdhIgmi0gV0\n/XYSdqTwHa/EhKS8pTDoQ6+x4E4kg3zYfk9UIqIdR564A3zUuDN7OpUWzHjMXz1Y\nQD1JOr6Q6pGYCF280RgG8cTpYDrYHd22y0dvsTXAite0bjdDEesNyKypZ4Jg8Qz8\nBwlrdPzzAgMBAAECggEAOkuEejtSj/Vu2WixFA8MVTmBKjr9UyCpwhp63eARAMPW\n50HtM5rdqTAjtorane+tFuQOl9Awl1wShDZEosChCD7ZKlmDEqVWOnKacbCkF1zR\nl07BbOb/64aM0BjNDn09xz9KNi7DP6kMse6F25v9/nGdJ/ktOUNCe9JlVVo+KAAJ\nxb/DCBbuf14wJDpNxvZlUE6paJXQAtzUU1448lzLWsEVu8/krkVJmkti0YNeGvEd\nua/Mzj2dZ1Sjr+GdMSSSEzYkSXPr3nfFR32A46CYmG5tA5tISZZgHr3pVrWiygpF\nI8EMdKmWtqJPHCHvyZ+nLYqkiNejVj+Qvp7eZz7LcQKBgQDiM/Se3BPHOmmXNiZX\nrf6I2Lb7RsxyOMcUWQwCnos6thpgTRs0qsRZ6rScu54Krc11WZMNyUxBXc/5QqDF\nO7zk5F6uwgsuOPtqSw0VTg6RwI422ZV1lNE8/kPEdqh1oRaJVd0m4oVBcb3H1Ytq\n/+N7nu8gBCe2e0VINYqFqkAgYwKBgQDPpb/LfiiZ0ZMH2Wl7PRJzRcUHLrWnC12W\nrOGUybtC493qy4p0VxJOz4Q6oYxV9oVV1PknqYG6sC9WLYok9yD/uTNhaLmHk2Ni\nithVNFd3jq198tNSH4uHlyWQUMxFcw+5dnxwNds7GjL95zJFFCTOGPHnVdTZ+1W7\nijrsfT8uMQKBgHMK/4dn4Hs73wXzmU6QhFqu9WkYmdQhwkY7/5q5bZAfm4yMyqBf\nlVsxvkfUN82wlUTwmJSzYx//iU15MHD/L9OtveXddHg+rMdjgjTqrQg9yVZmFNhn\nJn+BxY9+1bB1jBOu4rnrDOC6601d8vkpSVXPAEjlNBlf2l2eNWRDsTeHAoGBAJoA\n1lS4Rqh+dMvXhZHvY6W200BWdkdj+I9tvQi67XXYxpgDSbardVqaMfnCIvEGmzFj\neT7fSuYJEbKap+BuoTzIQME4CJHy0D0fuP7IiS6U1TuaQvyfhL6VbTixlC7V/Y2R\nwQ0ABI67CaKiO/hbzkhE2/S1Bd59t8IV7UnEQn2hAoGBAL2ZtIVa27bDwDKv1uDv\nnKN+kvdlJ9xo7XaV/0tQtHyeMxNzm6QiXoEexMLmvD71kAwBWGdfJJmHh4QPElsj\nMgDmt0zu4ZEywKbhkmivWtr6oSKhHizkiwk0uy5HZEilVfzJ1QXQPVkB5ST3ChPC\nElvp+bkGBiI9szdGUTQuhIzT\n-----END PRIVATE KEY-----\n",
+  "client_email": "ecommers-tennis-service@ecommers-tennis.iam.gserviceaccount.com",
+  "client_id": "106001704748386744537",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/ecommers-tennis-service%40ecommers-tennis.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

@@ -1,0 +1,10 @@
+cd C:\Users\AleRaiCH\Documents\PROYECTOS\PAGINAS\ecommers-tennis
+set DB_ENV=aiven
+set DB_HOST=mysql-ecommers-ecommers-tennis.c.aivencloud.com
+set DB_PORT=16216
+set DB_USER=avnadmin
+set DB_PASSWORD=AVNS_ak0Z_HS_F61WMTuVIfZ
+set DB_NAME=ecommers_tennis
+set APP_URL=http://localhost:3000
+set JWT_SECRET=x7k9m2p8q3z5w1r4t6y
+set GOOGLE_DRIVE_FOLDER_ID=1CY3Nla2eVN5XN9VcsEI4m6v991yK-iOx
