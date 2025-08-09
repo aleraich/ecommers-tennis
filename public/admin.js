@@ -29,7 +29,6 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             const formData = new FormData(e.target);
             console.log('Enviando FormData:', Object.fromEntries(formData.entries()), 'Archivo:', formData.get('media')?.name || 'Sin archivo');
-            alert('Formulario enviado. Preparando datos para subir...');
 
             try {
                 const res = await fetch(`${API_URL}/admin/products`, {
@@ -72,7 +71,6 @@ document.addEventListener('DOMContentLoaded', () => {
             errorMessage.style.display = 'none';
             emptyMessage.style.display = 'none';
             productList.innerHTML = ''; // Limpiar la tabla antes de renderizar
-            alert('Iniciando carga de productos desde el servidor...');
 
             console.log(`Solicitando productos a ${API_URL}/products con token: ${token.substring(0, 10)}...`);
 
@@ -86,12 +84,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const products = await response.json();
             console.log('Productos cargados (detalle):', products.map(p => ({ id: p.id, media: p.media, name: p.name })));
-            alert('Productos recibidos del servidor. Total: ' + products.length);
 
             if (!products || products.length === 0) {
                 emptyMessage.style.display = 'block';
                 isLoading = false;
-                alert('No hay productos para mostrar.');
                 return;
             }
 
@@ -101,10 +97,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     year: 'numeric', month: '2-digit', day: '2-digit',
                     hour: '2-digit', minute: '2-digit'
                 }) : 'Sin fecha';
-                const fileId = product.media.split('id=')[1] || product.media.match(/\/d\/(.+?)\//)?.[1] || '';
+                const fileId = product.media ? (product.media.split('id=')[1] || product.media.match(/\/d\/(.+?)\//)?.[1] || '') : '';
                 const mediaPreview = product.media ? 
                     `<img src="${API_URL}/proxy/image?id=${fileId}" alt="${product.name || 'Imagen no disponible'}" width="50" 
-                          onerror="console.log('Error al cargar imagen para ID ${product.id}:', this.src); this.onerror=null; alert('Error al cargar imagen para ID ${product.id}: ' + this.src); this.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg=='; this.alt='Imagen no disponible';">` : 
+                          onerror="console.log('Error al cargar imagen para ID ${product.id}:', this.src); this.onerror=null; this.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg=='; this.alt='Imagen no disponible';">` : 
                     'Sin media';
                 row.innerHTML = `
                     <td>${product.id}</td>
@@ -118,15 +114,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
                 productList.appendChild(row);
             });
-            alert('Tabla de productos renderizada con éxito.');
         } catch (err) {
             console.error('Error al cargar productos:', err.message, 'Detalles:', err);
             loadingMessage.style.display = 'none';
             errorMessage.style.display = 'block';
             errorMessage.textContent = `Error al cargar productos: ${err.message}`;
-            alert('Error al cargar productos: ' + err.message);
             if (err.message.includes('403')) {
-                alert('Sesión expirada. Por favor, inicia sesión nuevamente.');
                 localStorage.removeItem('token');
                 localStorage.removeItem('userName');
                 localStorage.removeItem('userRole');
@@ -199,7 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
     reloadButton.textContent = 'Recargar Productos';
     reloadButton.style.margin = '10px';
     reloadButton.addEventListener('click', () => {
-        alert('Botón Recargar Productos presionado. Iniciando recarga...');
+        console.log('Botón Recargar Productos presionado. Iniciando recarga...');
         loadProducts();
     });
     document.querySelector('.section#products').prepend(reloadButton);

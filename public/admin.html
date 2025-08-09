@@ -17,7 +17,9 @@
         </div>
     </header>
 
-    <div class="sidebar">
+    <button id="sidebarToggle" class="sidebar-toggle">☰</button> <!-- Botón para colapsar sidebar en móvil -->
+
+    <div class="sidebar" id="sidebar">
         <ul>
             <li><a href="#dashboard" class="active">Dashboard</a></li>
             <li><a href="#products">Productos</a></li>
@@ -109,5 +111,14 @@
     </main>
 
     <script src="admin.js"></script>
+    <script>
+        // Script para colapsar sidebar en móvil
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const sidebar = document.getElementById('sidebar');
+
+        sidebarToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('active');
+        });
+    </script>
 </body>
 </html>

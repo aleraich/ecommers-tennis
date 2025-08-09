@@ -98,14 +98,8 @@ header {
     transition: background-color 0.3s;
 }
 
-.main-nav li a:hover {
+.main-nav li a:hover, .main-nav a.active {
     background-color: #333;
-}
-
-.main-nav a.active {
-    background-color: #00ccff;
-    color: #1a1a1a;
-    font-weight: bold;
 }
 
 .container {
@@ -416,4 +410,58 @@ header {
 
 .checkout-button:hover {
     background-color: #357abd;
+}
+
+/* Media Queries para Responsividad */
+@media (max-width: 768px) {
+    .top-bar {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .top-bar .left, .top-bar .right {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .top-bar input[type="search"] {
+        width: 100%;
+    }
+
+    .main-nav ul {
+        flex-direction: column;
+        gap: 5px;
+        padding: 10px;
+    }
+
+    .container {
+        padding: 10px;
+    }
+
+    .product-grid {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 10px;
+    }
+
+    .modal-content {
+        width: 90%;
+        margin: 20% auto;
+    }
+
+    .cart-panel {
+        width: 100%;
+        right: -100%;
+    }
+
+    .cart-panel.open {
+        right: 0;
+    }
+
+    .product-container {
+        padding: 10px;
+    }
+
+    .product-media {
+        max-height: 300px;
+    }
 }
