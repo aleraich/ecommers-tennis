@@ -5,11 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>RAHEL - Tienda Online</title>
     <link rel="stylesheet" href="/styles.css" />
+    <link rel="icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==" type="image/x-icon" /> <!-- Favicon temporal -->
 </head>
 <body>
     <header>
         <div class="top-bar">
             <div class="left">
+                <button id="menuToggle" class="menu-toggle">☰</button> <!-- Botón hamburguesa -->
                 <a href="#" id="brandLink"><h1 class="brand-name">RAHEL</h1></a>
                 <input type="search" id="searchInput" placeholder="Buscar productos..." />
             </div>
@@ -22,7 +24,7 @@
             </div>
         </div>
 
-        <nav class="main-nav">
+        <nav class="main-nav" id="mainNav">
             <ul>
                 <li><a href="#" data-category="HOMBRE">HOMBRE</a></li>
                 <li><a href="#" data-category="MUJER">MUJER</a></li>
@@ -100,8 +102,15 @@
         const cartItemsContainer = document.getElementById('cartItems');
         const cartTotal = document.getElementById('cartTotal').querySelector('span');
         const checkoutButton = document.getElementById('checkoutButton');
+        const menuToggle = document.getElementById('menuToggle');
+        const mainNav = document.getElementById('mainNav');
         let currentCategory = '';
         let currentSort = 'newest';
+
+        // Toggle del menú hamburguesa
+        menuToggle.addEventListener('click', () => {
+            mainNav.classList.toggle('open');
+        });
 
         // Gestión del carrito
         function getCart() {
@@ -138,9 +147,8 @@
             cart.forEach(item => {
                 const itemElement = document.createElement('div');
                 itemElement.className = 'cart-item';
-                // Usar el proxy para las imágenes en el carrito
                 const fileId = item.media ? item.media.split('id=')[1] || item.media.match(/\/d\/(.+?)\//)?.[1] : null;
-                const mediaUrl = fileId ? `${BASE_URL}/proxy/image?id=${fileId}` : 'https://via.placeholder.com/80';
+                const mediaUrl = fileId ? `${BASE_URL}/proxy/image?id=${fileId}` : 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==';
                 itemElement.innerHTML = `
                     <img src="${mediaUrl}" alt="${item.name}">
                     <div class="cart-item-details">
@@ -156,7 +164,6 @@
 
             cartTotal.textContent = `$${total.toFixed(2)}`;
 
-            // Añadir eventos a los inputs de cantidad y botones de eliminar
             cartItemsContainer.querySelectorAll('input[type="number"]').forEach(input => {
                 input.addEventListener('change', (e) => {
                     updateCartItemQuantity(parseInt(e.target.dataset.id), e.target.value);
@@ -178,7 +185,6 @@
             cartPanel.classList.remove('open');
         }
 
-        // Eventos del carrito
         cartIcon.addEventListener('click', () => {
             renderCart();
             openCartPanel();
@@ -199,7 +205,6 @@
             }
         });
 
-        // Verificar si hay un usuario autenticado
         function checkAuth() {
             const token = localStorage.getItem('token');
             const userName = localStorage.getItem('userName');
@@ -223,7 +228,6 @@
             }
         }
 
-        // Botones de modal
         btnLogin.addEventListener('click', (e) => {
             e.preventDefault();
             loginForm.style.display = 'block';
@@ -264,7 +268,6 @@
             }
         });
 
-        // Manejar inicio de sesión
         document.getElementById('loginSubmit').addEventListener('click', async (e) => {
             e.preventDefault();
             const email = document.getElementById('loginEmail').value;
@@ -308,7 +311,6 @@
             }
         });
 
-        // Manejar registro
         document.getElementById('registerSubmit').addEventListener('click', async (e) => {
             e.preventDefault();
             const name = document.getElementById('registerName').value;
@@ -345,7 +347,6 @@
             }
         });
 
-        // Cargar productos
         async function loadProducts(query = '', category = currentCategory, sort = currentSort) {
             const loadingMessage = document.getElementById('loadingMessage');
             const errorMessage = document.getElementById('errorMessage');
@@ -393,12 +394,11 @@
                 const card = document.createElement('div');
                 card.className = 'product-card';
                 card.style.cursor = 'pointer';
-                // Extraer fileId y usar el proxy para las imágenes
                 const fileId = media ? media.split('id=')[1] || media.match(/\/d\/(.+?)\//)?.[1] : null;
-                const mediaUrl = fileId ? `${BASE_URL}/proxy/image?id=${fileId}` : 'https://via.placeholder.com/250';
+                const mediaUrl = fileId ? `${BASE_URL}/proxy/image?id=${fileId}` : 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==';
                 const mediaElement = media && (media.endsWith('.mp4') || media.endsWith('.webm')) ?
                     `<video src="${mediaUrl}" alt="${name}" width="250" controls></video>` :
-                    `<img src="${mediaUrl}" alt="${name}" onerror="this.onerror=null; this.src='https://via.placeholder.com/250'; this.alt='Imagen no disponible';">`;
+                    `<img src="${mediaUrl}" alt="${name}" onerror="this.onerror=null; this.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg=='; this.alt='Imagen no disponible';">`;
                 card.innerHTML = `
                     ${mediaElement}
                     <h3>${name}</h3>
@@ -411,7 +411,6 @@
             });
         }
 
-        // Manejar clic en el logo RAHEL
         brandLink.addEventListener('click', (e) => {
             e.preventDefault();
             currentCategory = '';
@@ -422,7 +421,6 @@
             loadProducts();
         });
 
-        // Manejar clics en el menú principal
         const navLinks = document.querySelectorAll('.main-nav a:not(#adminLink)');
         navLinks.forEach(link => {
             link.addEventListener('click', (e) => {
@@ -436,13 +434,11 @@
             });
         });
 
-        // Evento de búsqueda
         document.getElementById('searchInput').addEventListener('input', (e) => {
             const query = e.target.value.trim();
             loadProducts(query, currentCategory, currentSort);
         });
 
-        // Llamar a checkAuth al cargar la página
         document.addEventListener('DOMContentLoaded', () => {
             checkAuth();
             loadProducts();
