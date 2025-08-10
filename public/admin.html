@@ -90,8 +90,35 @@
         </section>
 
         <section id="inventory" class="section" style="display: none;">
-            <h2>Inventario</h2>
-            <p>Control de stock de productos (próximamente).</p>
+            <h2>Inventario – Centro de Control de Disponibilidad</h2>
+            <!-- Campo de búsqueda -->
+            <div class="inventory-controls">
+                <input type="text" id="inventorySearch" placeholder="Buscar por nombre, modelo o código..." class="search-input" />
+            </div>
+            <!-- Tabla de inventario -->
+            <h3>Stock Disponible</h3>
+            <table id="inventoryTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre</th>
+                        <th>Cantidad Disponible</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="inventoryList"></tbody>
+            </table>
+            <div id="inventoryLoadingMessage" class="loading-message" style="display: none;">Cargando inventario...</div>
+            <div id="inventoryErrorMessage" class="error-message" style="display: none; color: red;"></div>
+            <div id="inventoryEmptyMessage" class="empty-message" style="display: none;">No hay productos en inventario.</div>
+            <!-- Formulario para actualizar cantidades (solo UI por ahora) -->
+            <h3>Actualizar Cantidad</h3>
+            <form id="updateInventoryForm" class="inventory-form">
+                <input type="text" id="updateProductId" placeholder="ID del producto" required />
+                <input type="number" id="updateQuantity" placeholder="Nueva cantidad" min="0" required />
+                <button type="submit">Actualizar</button>
+            </form>
         </section>
 
         <section id="promotions" class="section" style="display: none;">
