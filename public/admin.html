@@ -5,6 +5,90 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>RAHEL - Panel de Administración</title>
     <link rel="stylesheet" href="admin.css" />
+    <style>
+        body {
+            background-color: #000;
+            color: #fff;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background-color: #333;
+        }
+        th, td {
+            border: 1px solid #555;
+            padding: 8px;
+            text-align: left;
+            color: #fff;
+        }
+        th {
+            background-color: #222;
+            color: #fff;
+            font-weight: bold;
+        }
+        tr:nth-child(even) {
+            background-color: #444;
+        }
+        tr:hover {
+            background-color: #555;
+        }
+        .low-stock {
+            color: #ff4444;
+        }
+        .inventory-controls, .variant-form {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #222;
+            border-radius: 5px;
+        }
+        #variantDetails table, #inventoryTable, #stockHistoryTable {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        #variantDetails table th, #inventoryTable th, #stockHistoryTable th {
+            background: #111;
+        }
+        #variantDetails table td, #inventoryTable td, #stockHistoryTable td {
+            padding: 8px;
+            border: 1px solid #555;
+        }
+        .variant-form, #variantDetails, #stockHistorySection {
+            background: #333;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+        #productTable img, #variantTable img {
+            max-width: 50px;
+            max-height: 50px;
+            vertical-align: middle;
+        }
+        .loading-message, .error-message, .empty-message {
+            margin-top: 10px;
+            color: #ccc;
+        }
+        .error-message {
+            color: #ff5555;
+        }
+        .inventory-form {
+            margin: 10px 0;
+            padding: 15px;
+            background: #222;
+            border-radius: 5px;
+        }
+        header, .sidebar, .admin-container {
+            background-color: #000;
+            color: #fff;
+        }
+        .sidebar a {
+            color: #fff;
+        }
+        .sidebar a:hover, .sidebar a.active {
+            background-color: #555;
+            color: #fff;
+        }
+    </style>
 </head>
 <body>
     <header class="top-bar">
@@ -17,7 +101,7 @@
         </div>
     </header>
 
-    <button id="sidebarToggle" class="sidebar-toggle">☰</button> <!-- Botón para colapsar sidebar en móvil -->
+    <button id="sidebarToggle" class="sidebar-toggle">☰</button>
 
     <div class="sidebar" id="sidebar">
         <ul>
@@ -26,6 +110,7 @@
             <li><a href="#orders">Pedidos</a></li>
             <li><a href="#users">Usuarios</a></li>
             <li><a href="#inventory">Inventario</a></li>
+            <li><a href="#stock-history">Historial de Stock</a></li>
             <li><a href="#promotions">Promociones</a></li>
             <li><a href="#reports">Reportes</a></li>
             <li><a href="#settings">Configuración</a></li>
@@ -43,7 +128,7 @@
             <form id="productForm" class="product-form" enctype="multipart/form-data">
                 <input type="text" name="name" placeholder="Nombre" required />
                 <input type="number" name="price" placeholder="Precio" step="0.01" required />
-                <input type="file" name="media" accept="image/jpeg,image/png,video/mp4,video/webm" />
+                <input type="file" name="media" accept="image/jpeg,image/png,video/mp4,video/webm" required />
                 <input type="text" name="description" placeholder="Descripción (opcional)" />
                 <select name="category" required>
                     <option value="" disabled selected>Seleccionar categoría</option>
@@ -77,6 +162,38 @@
             <div id="loadingMessage" class="loading-message" style="display: none;">Cargando productos...</div>
             <div id="errorMessage" class="error-message" style="display: none; color: red;"></div>
             <div id="emptyMessage" class="empty-message" style="display: none;">No hay productos disponibles.</div>
+            <div class="variant-form" style="margin-top: 20px; display: none;">
+                <h3>Añadir Variante</h3>
+                <form id="variantForm" enctype="multipart/form-data">
+                    <input type="hidden" id="variantProductId" name="productId">
+                    <label for="variantColor">Color:</label>
+                    <input type="text" id="variantColor" name="color" required>
+                    <label for="variantImage">Imagen del Color:</label>
+                    <input type="file" id="variantImage" name="image" accept="image/jpeg,image/png" required>
+                    <label for="variantSize">Talla:</label>
+                    <select id="variantSize" name="size" required>
+                        <option value="" disabled selected>Seleccionar talla</option>
+                        <option value="6">6</option>
+                        <option value="7">7</option>
+                        <option value="8">8</option>
+                        <option value="9">9</option>
+                        <option value="10">10</option>
+                        <option value="11">11</option>
+                    </select>
+                    <label for="variantStock">Stock:</label>
+                    <input type="number" id="variantStock" name="stock" min="0" required>
+                    <button type="submit">Añadir Variante</button>
+                </form>
+                <div id="variantMessage" style="color: green; margin-top: 10px;"></div>
+            </div>
+            <div id="variantDetails" style="display: none; margin-top: 20px;">
+                <h3>Detalles de Variantes</h3>
+                <table id="variantTable">
+                    <thead><tr><th>ID</th><th>Color</th><th>Talla</th><th>Stock</th><th>Imagen</th></tr></thead>
+                    <tbody id="variantList"></tbody>
+                </table>
+                <button onclick="document.getElementById('variantDetails').style.display='none'">Cerrar</button>
+            </div>
         </section>
 
         <section id="orders" class="section" style="display: none;">
@@ -91,18 +208,17 @@
 
         <section id="inventory" class="section" style="display: none;">
             <h2>Inventario – Centro de Control de Disponibilidad</h2>
-            <!-- Campo de búsqueda -->
             <div class="inventory-controls">
-                <input type="text" id="inventorySearch" placeholder="Buscar por nombre, modelo o código..." class="search-input" />
+                <input type="text" id="inventorySearch" placeholder="Buscar por nombre, ID o categoría..." class="search-input" />
+                <button id="inventoryRefresh">Recargar Inventario</button>
             </div>
-            <!-- Tabla de inventario -->
             <h3>Stock Disponible</h3>
             <table id="inventoryTable">
                 <thead>
                     <tr>
                         <th>ID</th>
                         <th>Nombre</th>
-                        <th>Cantidad Disponible</th>
+                        <th>Cantidad Total</th>
                         <th>Estado</th>
                         <th>Acciones</th>
                     </tr>
@@ -112,13 +228,35 @@
             <div id="inventoryLoadingMessage" class="loading-message" style="display: none;">Cargando inventario...</div>
             <div id="inventoryErrorMessage" class="error-message" style="display: none; color: red;"></div>
             <div id="inventoryEmptyMessage" class="empty-message" style="display: none;">No hay productos en inventario.</div>
-            <!-- Formulario para actualizar cantidades (solo UI por ahora) -->
             <h3>Actualizar Cantidad</h3>
             <form id="updateInventoryForm" class="inventory-form">
-                <input type="text" id="updateProductId" placeholder="ID del producto" required />
+                <input type="text" id="updateVariantId" placeholder="ID de la variante" required />
                 <input type="number" id="updateQuantity" placeholder="Nueva cantidad" min="0" required />
-                <button type="submit">Actualizar</button>
+                <button type="submit">Actualizar Stock</button>
             </form>
+            <div id="updateMessage" style="color: green; margin-top: 10px;"></div>
+        </section>
+
+        <section id="stock-history" class="section" style="display: none;">
+            <h2>Historial de Cambios de Stock</h2>
+            <table id="stockHistoryTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Variante ID</th>
+                        <th>Fecha</th>
+                        <th>Motivo</th>
+                        <th>Usuario</th>
+                        <th>Cambio</th>
+                        <th>Stock Anterior</th>
+                        <th>Stock Nuevo</th>
+                    </tr>
+                </thead>
+                <tbody id="stockHistoryList"></tbody>
+            </table>
+            <div id="stockHistoryLoadingMessage" class="loading-message" style="display: none;">Cargando historial...</div>
+            <div id="stockHistoryErrorMessage" class="error-message" style="display: none; color: red;"></div>
+            <div id="stockHistoryEmptyMessage" class="empty-message" style="display: none;">No hay historial disponible.</div>
         </section>
 
         <section id="promotions" class="section" style="display: none;">
@@ -139,7 +277,6 @@
 
     <script src="admin.js"></script>
     <script>
-        // Script para colapsar sidebar en móvil
         const sidebarToggle = document.getElementById('sidebarToggle');
         const sidebar = document.getElementById('sidebar');
 

@@ -125,22 +125,46 @@ checkoutButton.addEventListener('click', (e) => {
 function checkAuth() {
     const token = localStorage.getItem('token');
     const userName = localStorage.getItem('userName');
-    const userRole = localStorage.getItem('userRole');
 
-    if (token && userName) {
-        loginIcon.style.display = 'none'; // Oculta el ícono de login cuando está autenticado
-        btnLogout.style.display = 'inline';
-        userGreeting.style.display = 'inline';
-        userGreeting.textContent = `Hola, ${userName}`;
-        if (userRole === 'admin') {
-            adminLink.style.display = 'inline';
-        }
+    if (token) {
+        // Verificar autenticación con el servidor
+        fetch(`${BASE_URL}/api/check-auth`, {
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${token}` }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.authenticated) {
+                loginIcon.style.display = 'none';
+                userGreeting.style.display = 'inline';
+                userGreeting.textContent = `Hola, ${data.nombre || 'Usuario'}`;
+                btnLogout.style.display = 'inline';
+                if (data.role === 'admin') {
+                    adminLink.style.display = 'inline';
+                } else {
+                    adminLink.style.display = 'none';
+                }
+            } else {
+                logout();
+            }
+        })
+        .catch(err => {
+            console.error('Error verificando autenticación:', err);
+            logout();
+        });
     } else {
-        loginIcon.style.display = 'inline'; // Muestra el ícono de login cuando no está autenticado
-        btnLogout.style.display = 'none';
-        userGreeting.style.display = 'none';
-        adminLink.style.display = 'none';
+        logout();
     }
+}
+
+function logout() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('userName');
+    localStorage.removeItem('userRole');
+    loginIcon.style.display = 'inline';
+    userGreeting.style.display = 'none';
+    btnLogout.style.display = 'none';
+    adminLink.style.display = 'none';
 }
 
 loginIcon.addEventListener('click', (e) => {
@@ -162,10 +186,7 @@ document.getElementById('registerLink').addEventListener('click', (e) => {
 
 btnLogout.addEventListener('click', (e) => {
     e.preventDefault();
-    localStorage.removeItem('token');
-    localStorage.removeItem('userName');
-    localStorage.removeItem('userRole');
-    checkAuth();
+    logout();
     currentCategory = '';
     currentSort = 'newest';
     sectionTitle.textContent = 'Productos recientes';
