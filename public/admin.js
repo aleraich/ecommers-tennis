@@ -218,7 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
         variantForm.style.display = 'block';
     };
 
-    // Mostrar detalles de variantes
+    // Mostrar detalles de variantes con opción de borrar
     window.viewVariants = async function(id) {
         const variantDetails = document.getElementById('variantDetails');
         const variantList = document.getElementById('variantList');
@@ -243,6 +243,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <td>${v.size || 'Sin talla'}</td>
                         <td>${v.stock || 'Sin stock'}</td>
                         <td>${imagePreview}</td>
+                        <td><button class="delete-btn" onclick="deleteVariant(${v.id})">Borrar</button></td>
                     </tr>
                 `;
             }).join('');
@@ -274,6 +275,40 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (error) {
                 console.error('Error al eliminar producto:', error.message, 'Detalles:', error);
                 alert('Error al eliminar producto: ' + error.message);
+                if (error.message.includes('403')) {
+                    alert('Sesión expirada. Por favor, inicia sesión nuevamente.');
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('userName');
+                    localStorage.removeItem('userRole');
+                    window.location.href = '/';
+                }
+            }
+        }
+    };
+
+    // Eliminar variante
+    window.deleteVariant = async function(variantId) {
+        if (confirm('¿Seguro que quieres borrar esta variante?')) {
+            try {
+                const response = await fetch(`${API_URL}/admin/variants/${variantId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(`Error (${response.status}): ${data.message || 'No se pudo eliminar la variante'}`);
+                }
+
+                console.log('Variante eliminada:', variantId);
+                alert('Variante eliminada con ID: ' + variantId + '. Recargando productos...');
+                const productId = document.getElementById('variantProductId').value;
+                await viewVariants(productId);
+                await loadProducts();
+                await loadInventory();
+                await loadStockHistory();
+            } catch (error) {
+                console.error('Error al eliminar variante:', error.message, 'Detalles:', error);
+                alert('Error al eliminar variante: ' + error.message);
                 if (error.message.includes('403')) {
                     alert('Sesión expirada. Por favor, inicia sesión nuevamente.');
                     localStorage.removeItem('token');

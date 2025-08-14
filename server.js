@@ -113,6 +113,7 @@ app.get('/auth/callback', async (req, res) => {
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 app.get('/admin.html', verifyToken, verifyAdmin, (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
 app.get('/cliente.html', verifyToken, (req, res) => req.user.role !== 'cliente' ? res.status(403).json({ message: 'Acceso denegado' }) : res.sendFile(path.join(__dirname, 'public', 'cliente.html')));
+app.get('/vendedor.html', verifyToken, (req, res) => req.user.role !== 'vendedor' ? res.status(403).json({ message: 'Acceso denegado' }) : res.sendFile(path.join(__dirname, 'public', 'vendedor.html')));
 
 // Conexión a MySQL
 const dbConfig = process.env.DB_ENV === 'local'
@@ -133,9 +134,9 @@ app.post('/api/login', (req, res) => {
             if (err) return res.status(500).json({ message: 'Error en comparación', error: err.message });
             if (!isMatch) return res.status(401).json({ message: 'Contraseña incorrecta' });
             const token = jwt.sign({ id: results[0].id, email, role: results[0].role, nombre: results[0].nombre || 'Administrador' }, JWT_SECRET, { expiresIn: '1h' });
-            // Aseguramos que siempre se devuelva un nombre válido
             const userName = results[0].nombre || 'Administrador';
-            res.json({ token, nombre: userName, role: results[0].role, message: 'Login exitoso' });
+            const redirectUrl = results[0].role === 'admin' ? '/admin.html' : results[0].role === 'cliente' ? '/cliente.html' : results[0].role === 'vendedor' ? '/vendedor.html' : '/';
+            res.json({ token, nombre: userName, role: results[0].role, redirectUrl, message: 'Login exitoso' });
         });
     });
 });
@@ -156,22 +157,96 @@ app.post('/api/register', (req, res) => {
 });
 
 app.get('/api/check-auth', verifyToken, (req, res) => {
-    // Devuelve la información del usuario autenticado
     res.json({
         authenticated: true,
         nombre: req.user.nombre || 'Usuario',
-        role: req.user.role
+        role: req.user.role,
+        id: req.user.id // Añadimos el ID del usuario
+    });
+});
+
+app.post('/api/register-vendedor', verifyToken, verifyAdmin, (req, res) => {
+    const { name, email, password } = req.body;
+    if (!name || !email || !password) return res.status(400).json({ message: 'Todos los campos son requeridos' });
+    db.query('SELECT * FROM usuarios WHERE email = ?', [email], (err, results) => {
+        if (err) return res.status(500).json({ message: 'Error en servidor', error: err.message });
+        if (results.length) return res.status(400).json({ message: 'Correo ya registrado' });
+        bcrypt.hash(password, 10, (err, hash) => {
+            if (err) return res.status(500).json({ message: 'Error al hashear', error: err.message });
+            db.query('INSERT INTO usuarios (nombre, email, password, role) VALUES (?, ?, ?, ?)', [name, email, hash, 'vendedor'], (err) =>
+                err ? res.status(500).json({ message: 'Error al registrar', error: err.message }) : res.json({ message: 'Vendedor registrado exitosamente' })
+            );
+        });
+    });
+});
+
+// Nuevo endpoint para registrar ventas
+app.post('/api/register-sale', verifyToken, (req, res) => {
+    const { variantId, quantity, price, total, paymentMethod, vendedorId } = req.body;
+    if (!variantId || !quantity || !price || !total || !paymentMethod || !vendedorId) {
+        return res.status(400).json({ message: 'Todos los campos son requeridos' });
+    }
+
+    db.beginTransaction(async (err) => {
+        if (err) {
+            console.error('Error iniciando transacción:', err.message);
+            return res.status(500).json({ message: 'Error en transacción', error: err.message });
+        }
+
+        try {
+            // Verificar stock actual
+            const [variant] = await db.promise().query('SELECT stock, product_id FROM product_variants WHERE id = ?', [variantId]);
+            if (!variant.length) return res.status(404).json({ message: 'Variante no encontrada' });
+            const currentStock = variant[0].stock;
+            if (currentStock < quantity) return res.status(400).json({ message: 'Stock insuficiente' });
+
+            // Obtener nombre del producto
+            const [product] = await db.promise().query('SELECT name FROM products WHERE id = ?', [variant[0].product_id]);
+            const productName = product[0].name;
+
+            // Registrar venta
+            await db.promise().query(
+                'INSERT INTO ventas (producto, color, talla, cantidad, precio_unitario, monto_total, metodo_pago, vendedor_id) VALUES (?, (SELECT color FROM product_variants WHERE id = ?), (SELECT size FROM product_variants WHERE id = ?), ?, ?, ?, ?, ?)',
+                [productName, variantId, variantId, quantity, price, total, paymentMethod, vendedorId]
+            );
+
+            // Actualizar stock
+            await db.promise().query(
+                'UPDATE product_variants SET stock = stock - ? WHERE id = ?',
+                [quantity, variantId]
+            );
+
+            await db.promise().commit();
+            res.json({ message: 'Venta registrada con éxito' });
+        } catch (err) {
+            await db.promise().rollback();
+            console.error('Error al registrar venta:', err.message);
+            res.status(500).json({ message: 'Error al registrar venta', error: err.message });
+        }
     });
 });
 
 // Endpoints de productos
 app.get('/products', (req, res) => {
     const { search, category, sort } = req.query;
-    let query = 'SELECT id, name, price, media, description, category, created_at FROM products';
+    let query = `
+        SELECT p.id, p.name, p.price, p.media, p.description, p.category, p.created_at,
+               v.id AS variant_id, v.color, v.size, v.stock, v.imagen_color
+        FROM products p
+        LEFT JOIN product_variants v ON p.id = v.product_id
+    `;
     const params = [];
-    if (search) { params.push(`%${search}%`, `%${search}%`); query += ' WHERE (name LIKE ? OR id LIKE ?)'; }
-    if (category) { params.push(category); query += params.length ? ' AND category = ?' : ' WHERE category = ?'; }
-    if (sort === 'newest') query += ' ORDER BY created_at DESC';
+
+    if (search) {
+        params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
+        query += ' WHERE (p.name LIKE ? OR p.id LIKE ? OR v.color LIKE ? OR v.size LIKE ?)';
+    }
+    if (category) {
+        params.push(category);
+        query += params.length ? ' AND p.category = ?' : ' WHERE p.category = ?';
+    }
+    if (sort === 'newest') query += ' ORDER BY p.created_at DESC';
+
     console.log('Ejecutando consulta SQL:', query, 'con parámetros:', params);
     db.query(query, params, (err, results) => {
         if (err) {
@@ -179,16 +254,31 @@ app.get('/products', (req, res) => {
             return res.status(500).json({ message: 'Error al consultar productos', error: err.message });
         }
         console.log('Resultados de la consulta:', results);
-        const mappedResults = results.map(product => ({
-            id: product.id,
-            name: product.name,
-            price: product.price,
-            media: product.media,
-            description: product.description,
-            category: product.category,
-            created_at: product.created_at
-        }));
-        res.json(mappedResults);
+        const mappedResults = results.reduce((acc, row) => {
+            if (!acc[row.id]) {
+                acc[row.id] = {
+                    id: row.id,
+                    name: row.name,
+                    price: row.price,
+                    media: row.media,
+                    description: row.description,
+                    category: row.category,
+                    created_at: row.created_at,
+                    variants: []
+                };
+            }
+            if (row.variant_id) {
+                acc[row.id].variants.push({
+                    id: row.variant_id,
+                    color: row.color,
+                    size: row.size,
+                    stock: row.stock,
+                    imagen_color: row.imagen_color
+                });
+            }
+            return acc;
+        }, {});
+        res.json(Object.values(mappedResults));
     });
 });
 
@@ -299,6 +389,10 @@ app.post('/admin/variants', verifyToken, verifyAdmin, (req, res, next) => {
         if (isNaN(productId) || isNaN(parseInt(stock))) {
             return res.status(400).json({ message: 'Product ID y stock deben ser números válidos' });
         }
+        const sizeNum = parseInt(size);
+        if (sizeNum < 27 || sizeNum > 45) {
+            return res.status(400).json({ message: 'La talla debe estar entre 27 y 45' });
+        }
 
         let imagen_color = null;
         if (req.files && req.files['image'] && req.files['image'][0]) {
@@ -324,7 +418,7 @@ app.post('/admin/variants', verifyToken, verifyAdmin, (req, res, next) => {
 
         db.query(
             'INSERT INTO product_variants (product_id, color, size, stock, imagen_color) VALUES (?, ?, ?, ?, ?)',
-            [productId, color, size, parseInt(stock), imagen_color],
+            [productId, color, sizeNum, parseInt(stock), imagen_color],
             (err, result) => {
                 if (err) {
                     console.error('Error en la base de datos (product_variants):', err.message, 'Stack:', err.stack);
@@ -350,18 +444,15 @@ app.put('/admin/variants/:id/stock', verifyToken, verifyAdmin, (req, res) => {
         }
 
         try {
-            // Obtener stock anterior
             const [rows] = await db.promise().query('SELECT stock FROM product_variants WHERE id = ?', [id]);
             if (!rows.length) return res.status(404).json({ message: 'Variante no encontrada' });
             const stockAnterior = rows[0].stock;
 
-            // Actualizar stock
             await db.promise().query(
                 'UPDATE product_variants SET stock = ? WHERE id = ?',
                 [parseInt(stock), id]
             );
 
-            // Registrar en stock_history
             const usuario = req.user.nombre || 'Admin';
             const cambio = parseInt(stock) - stockAnterior;
             await db.promise().query(
@@ -413,6 +504,29 @@ app.delete('/admin/products/:id', verifyToken, verifyAdmin, (req, res) => {
                 }
                 res.json({ message: 'Producto y variantes eliminados' });
             });
+        });
+    });
+});
+
+// Nuevo endpoint para borrar variante
+app.delete('/admin/variants/:id', verifyToken, verifyAdmin, (req, res) => {
+    const { id } = req.params;
+    db.query('SELECT imagen_color FROM product_variants WHERE id = ?', [id], async (err, results) => {
+        if (err) return res.status(500).json({ message: 'Error al obtener variante', error: err.message });
+        if (!results.length) return res.status(404).json({ message: 'Variante no encontrada' });
+
+        const imagen_color = results[0].imagen_color;
+        db.query('DELETE FROM product_variants WHERE id = ?', [id], async (err) => {
+            if (err) return res.status(500).json({ message: 'Error al eliminar variante', error: err.message });
+            if (imagen_color && drive) {
+                try {
+                    const fileId = imagen_color.split('id=')[1];
+                    await drive.files.delete({ fileId });
+                } catch (err) {
+                    console.warn('Error eliminando imagen de variante de Drive:', err.message);
+                }
+            }
+            res.json({ message: 'Variante eliminada con éxito' });
         });
     });
 });

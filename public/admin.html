@@ -88,6 +88,18 @@
             background-color: #555;
             color: #fff;
         }
+        .delete-btn {
+            background-color: #ff4444;
+            color: #fff;
+            border: 1px solid #555;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .delete-btn:hover {
+            background-color: #cc0000;
+        }
     </style>
 </head>
 <body>
@@ -173,12 +185,26 @@
                     <label for="variantSize">Talla:</label>
                     <select id="variantSize" name="size" required>
                         <option value="" disabled selected>Seleccionar talla</option>
-                        <option value="6">6</option>
-                        <option value="7">7</option>
-                        <option value="8">8</option>
-                        <option value="9">9</option>
-                        <option value="10">10</option>
-                        <option value="11">11</option>
+                        <!-- Tallas de 27 a 45 -->
+                        <option value="27">27</option>
+                        <option value="28">28</option>
+                        <option value="29">29</option>
+                        <option value="30">30</option>
+                        <option value="31">31</option>
+                        <option value="32">32</option>
+                        <option value="33">33</option>
+                        <option value="34">34</option>
+                        <option value="35">35</option>
+                        <option value="36">36</option>
+                        <option value="37">37</option>
+                        <option value="38">38</option>
+                        <option value="39">39</option>
+                        <option value="40">40</option>
+                        <option value="41">41</option>
+                        <option value="42">42</option>
+                        <option value="43">43</option>
+                        <option value="44">44</option>
+                        <option value="45">45</option>
                     </select>
                     <label for="variantStock">Stock:</label>
                     <input type="number" id="variantStock" name="stock" min="0" required>
@@ -189,7 +215,7 @@
             <div id="variantDetails" style="display: none; margin-top: 20px;">
                 <h3>Detalles de Variantes</h3>
                 <table id="variantTable">
-                    <thead><tr><th>ID</th><th>Color</th><th>Talla</th><th>Stock</th><th>Imagen</th></tr></thead>
+                    <thead><tr><th>ID</th><th>Color</th><th>Talla</th><th>Stock</th><th>Imagen</th><th>Acciones</th></tr></thead>
                     <tbody id="variantList"></tbody>
                 </table>
                 <button onclick="document.getElementById('variantDetails').style.display='none'">Cerrar</button>

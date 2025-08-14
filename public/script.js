@@ -378,3 +378,134 @@ document.addEventListener('DOMContentLoaded', () => {
     checkAuth();
     loadProducts();
 });
+// Nueva sección para la vista de vendedor
+function loadProductsForSeller(query = '') {
+    const productList = document.getElementById('productList');
+    productList.innerHTML = '<p>Cargando productos...</p>';
+
+    fetch(`${BASE_URL}/products?search=${query}`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    })
+    .then(res => res.json())
+    .then(products => {
+        productList.innerHTML = '';
+        products.forEach(product => {
+            fetch(`${BASE_URL}/api/product/${product.id}`)
+            .then(res => res.json())
+            .then(data => {
+                data.variants.forEach(variant => {
+                    const row = document.createElement('div');
+                    row.className = 'product-row';
+                    const fileId = variant.imagen_color ? variant.imagen_color.split('id=')[1] : product.media.split('id=')[1];
+                    const mediaUrl = fileId ? `${BASE_URL}/proxy/image?id=${fileId}` : 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==';
+                    row.innerHTML = `
+                        <img src="${mediaUrl}" alt="${product.name}" width="50">
+                        <span>${product.name}</span>
+                        <span>${variant.color}</span>
+                        <span>${variant.size}</span>
+                        <span>${variant.stock}</span>
+                        <span>${(product.price * 6.96).toFixed(2)} Bs</span> <!-- Convertir a bolivianos -->
+                        <button class="sellBtn" data-id="${variant.id}" data-product="${product.name}" data-color="${variant.color}" data-size="${variant.size}" data-stock="${variant.stock}">Vender</button>
+                    `;
+                    productList.appendChild(row);
+                });
+            });
+        });
+    })
+    .catch(err => {
+        productList.innerHTML = '<p>Error al cargar productos.</p>';
+        console.error(err);
+    });
+}
+
+document.getElementById('searchInput').addEventListener('input', (e) => {
+    loadProductsForSeller(e.target.value);
+});
+
+document.addEventListener('click', (e) => {
+    if (e.target.classList.contains('sellBtn')) {
+        const modal = document.getElementById('saleModal');
+        document.getElementById('modalProductName').textContent = e.target.dataset.product;
+        document.getElementById('modalColor').textContent = e.target.dataset.color;
+        document.getElementById('modalSize').textContent = e.target.dataset.size;
+        document.getElementById('modalStock').textContent = e.target.dataset.stock;
+        document.getElementById('saleQuantity').max = e.target.dataset.stock;
+        modal.style.display = 'block';
+        document.getElementById('confirmSaleBtn').dataset.id = e.target.dataset.id;
+    }
+});
+
+document.getElementById('closeModal').addEventListener('click', () => {
+    document.getElementById('saleModal').style.display = 'none';
+});
+
+document.getElementById('confirmSaleBtn').addEventListener('click', async () => {
+    const variantId = document.getElementById('confirmSaleBtn').dataset.id;
+    const quantity = parseInt(document.getElementById('saleQuantity').value);
+    const paymentMethod = document.getElementById('paymentMethod').value;
+
+    if (quantity <= 0 || quantity > parseInt(document.getElementById('modalStock').textContent)) {
+        alert('Cantidad inválida');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${BASE_URL}/admin/variants/${variantId}/stock`, {
+            method: 'PUT',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}` 
+            },
+            body: JSON.stringify({ stock: parseInt(document.getElementById('modalStock').textContent) - quantity, motivo: `Venta (${paymentMethod})` })
+        });
+        if (response.ok) {
+            alert('Venta registrada con éxito');
+            document.getElementById('saleModal').style.display = 'none';
+            loadProductsForSeller(document.getElementById('searchInput').value);
+        } else {
+            const data = await response.json();
+            alert(data.message || 'Error al registrar venta');
+        }
+    } catch (err) {
+        console.error('Error:', err);
+        alert('Error de conexión');
+    }
+});
+
+function checkAuth() {
+    const token = localStorage.getItem('token');
+    if (token) {
+        fetch(`${BASE_URL}/api/check-auth`, {
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${token}` }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.authenticated) {
+                loginIcon.style.display = 'none';
+                userGreeting.style.display = 'inline';
+                userGreeting.textContent = `Hola, ${data.nombre || 'Usuario'}`;
+                btnLogout.style.display = 'inline';
+                if (data.role === 'admin') {
+                    adminLink.style.display = 'inline';
+                    window.location.href = '/admin.html';
+                } else if (data.role === 'cliente') {
+                    window.location.href = '/cliente.html';
+                } else if (data.role === 'vendedor') {
+                    // Redirige a vendedor.html solo si no está ya en esa página
+                    if (window.location.pathname !== '/vendedor.html') {
+                        window.location.href = '/vendedor.html';
+                    }
+                }
+            } else {
+                logout();
+            }
+        })
+        .catch(err => {
+            console.error('Error verificando autenticación:', err);
+            logout();
+        });
+    } else {
+        logout();
+    }
+}

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vendedor - Tienda Rahel</title>
+    <link rel="stylesheet" href="vendedor.css">
+</head>
+<body>
+    <header>
+        <div class="logo">Rahel</div>
+        <input type="text" id="searchInput" placeholder="Buscar modelo...">
+        <div id="userGreeting"></div>
+        <button id="btnLogout">Salir</button>
+    </header>
+    <div id="productList"></div>
+
+    <!-- Panel de Variantes -->
+    <div id="variantPanel" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="variantModelName"></h2>
+                <span id="closePanel">&times;</span>
+            </div>
+            <div id="variantList" class="modal-body"></div>
+        </div>
+    </div>
+
+    <!-- Modal de Venta -->
+    <div id="saleModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Venta Rápida</h2>
+                <span id="closeModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p><strong>Producto:</strong> <span id="modalProductName"></span></p>
+                <p><strong>Color:</strong> <span id="modalColor"></span></p>
+                <p><strong>Talla:</strong> <span id="modalSize"></span></p>
+                <p><strong>Stock disponible:</strong> <span id="modalStock"></span></p>
+                <p><strong>Cantidad a vender:</strong> <input type="number" id="saleQuantity" min="1" value="1"></p>
+                <p><strong>Precio unitario (Bs):</strong> <input type="number" id="salePrice" min="0" step="0.01" value="0" placeholder="Ingresa el precio"></p>
+                <p><strong>Monto total (Bs):</strong> <span id="saleTotal">0.00</span></p>
+                <p><strong>Método de pago:</strong> <select id="paymentMethod">
+                    <option value="qr">QR</option>
+                    <option value="efectivo">Efectivo</option>
+                </select></p>
+                <button id="confirmSaleBtn">Confirmar Venta</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="vendedor.js"></script>
+</body>
+</html>
