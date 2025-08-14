@@ -50,7 +50,7 @@ header {
 }
 
 #btnLogout:hover {
-    background-color: #3a3a3a;
+    background-color: #3a3a2a;
 }
 
 #userGreeting {
@@ -234,47 +234,38 @@ header {
         flex-direction: column;
         padding: 10px 5px;
     }
-
     #searchInput {
         margin: 5px 0;
         width: 100%;
     }
-
     #btnLogout, #userGreeting {
         margin: 5px 0;
         width: 100%;
     }
-
     #variantPanel .modal-content,
     #saleModal .modal-content {
         margin: 10% auto;
         width: 95%;
     }
-
     .product-item {
         flex-direction: column;
         text-align: center;
     }
-
     .product-item img {
         margin-bottom: 10px;
     }
-
     .variant-row {
         flex-direction: column;
         text-align: center;
     }
-
     .variant-row img {
         margin: 0 0 10px 0;
         width: 80px;
         height: 80px;
     }
-
     .variant-details {
         text-align: center;
     }
-
     .variant-row .sellBtn,
     .variant-row .deleteBtn {
         margin-top: 10px;
@@ -287,12 +278,10 @@ header {
         padding: 10px;
         font-size: 0.9em;
     }
-
     .product-item img {
         width: 40px;
         height: 40px;
     }
-
     .variant-row img {
         width: 60px;
         height: 60px;
