@@ -131,31 +131,16 @@ function loadProducts(query = '') {
             return;
         }
         products.forEach(product => {
-            if (product.variants && product.variants.length > 0) {
-                product.variants.forEach(variant => {
-                    const item = document.createElement('div');
-                    item.className = 'product-item';
-                    item.dataset.id = product.id;
-                    const fileId = variant.imagen_color ? variant.imagen_color.split('id=')[1] : product.media ? product.media.split('id=')[1] : null;
-                    const mediaUrl = fileId ? `${BASE_URL}/proxy/image?id=${fileId}` : 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==';
-                    item.innerHTML = `
-                        <img src="${mediaUrl}" alt="${product.name || 'Producto'} - ${variant.color || 'Sin color'}">
-                        <span>${product.name || 'Sin nombre'}</span>
-                    `;
-                    productList.appendChild(item);
-                });
-            } else {
-                const item = document.createElement('div');
-                item.className = 'product-item';
-                item.dataset.id = product.id;
-                const fileId = product.media ? product.media.split('id=')[1] : null;
-                const mediaUrl = fileId ? `${BASE_URL}/proxy/image?id=${fileId}` : 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==';
-                item.innerHTML = `
-                    <img src="${mediaUrl}" alt="${product.name || 'Producto'}">
-                    <span>${product.name || 'Sin nombre'}</span>
-                `;
-                productList.appendChild(item);
-            }
+            const item = document.createElement('div');
+            item.className = 'product-item';
+            item.dataset.id = product.id;
+            const fileId = product.media ? product.media.split('id=')[1] : null;
+            const mediaUrl = fileId ? `${BASE_URL}/proxy/image?id=${fileId}` : 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==';
+            item.innerHTML = `
+                <img src="${mediaUrl}" alt="${product.name || 'Producto'}">
+                <span>${product.name || 'Sin nombre'}</span>
+            `;
+            productList.appendChild(item);
         });
     })
     .catch(err => {

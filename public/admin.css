@@ -19,6 +19,9 @@ body {
     padding: 10px 20px;
     background-color: #1f1f1f;
     border-bottom: 1px solid #333;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
 }
 
 .top-bar .left {
@@ -42,6 +45,7 @@ body {
     color: #80b3ff;
     font-weight: bold;
     cursor: pointer;
+    font-size: 14px; /* Ajuste para móviles */
 }
 
 .auth-link:hover {
@@ -73,6 +77,7 @@ body {
     padding-top: 60px;
     transition: transform 0.3s ease;
     transform: translateX(0);
+    z-index: 1000;
 }
 
 .sidebar.active {
@@ -93,6 +98,7 @@ body {
     color: #f0f0f0;
     font-size: 16px;
     display: block;
+    white-space: nowrap; /* Evita que el texto se desborde */
 }
 
 .sidebar a:hover, .sidebar a.active {
@@ -118,6 +124,7 @@ body {
 .section h2 {
     margin-top: 0;
     color: #f0f0f0;
+    font-size: 24px; /* Ajuste para títulos */
 }
 
 .product-form, .inventory-form {
@@ -134,6 +141,7 @@ body {
     border: 1px solid #444;
     color: #f0f0f0;
     border-radius: 4px;
+    font-size: 14px; /* Ajuste para móviles */
 }
 
 .product-form button, .inventory-form button {
@@ -143,6 +151,7 @@ body {
     border: none;
     border-radius: 5px;
     cursor: pointer;
+    font-size: 14px; /* Ajuste para móviles */
 }
 
 .product-form button:hover, .inventory-form button:hover {
@@ -156,9 +165,10 @@ table {
 }
 
 th, td {
-    padding: 10px;
+    padding: 8px;
     border: 1px solid #333;
     text-align: left;
+    font-size: 14px; /* Ajuste para móviles */
 }
 
 th {
@@ -168,7 +178,7 @@ th {
 
 .loading-message, .error-message, .empty-message {
     text-align: center;
-    font-size: 18px;
+    font-size: 16px;
     margin-top: 20px;
     color: #ccc;
 }
@@ -191,6 +201,7 @@ th {
     border: 1px solid #444;
     color: #f0f0f0;
     border-radius: 4px;
+    font-size: 14px; /* Ajuste para móviles */
 }
 
 #inventoryTable td:nth-child(3) { /* Cantidad Disponible */
@@ -239,10 +250,93 @@ th {
     .top-bar {
         flex-direction: column;
         gap: 10px;
+        padding: 10px;
     }
 
     .top-bar .left, .top-bar .right {
         width: 100%;
         justify-content: center;
+        text-align: center;
+    }
+
+    .brand-name {
+        font-size: 20px;
+    }
+
+    .auth-link {
+        font-size: 12px;
+    }
+
+    .section h2 {
+        font-size: 20px;
+    }
+
+    .product-form, .inventory-form {
+        max-width: 100%;
+    }
+
+    .product-form input, .product-form select, .inventory-form input,
+    .product-form button, .inventory-form button {
+        width: 100%;
+    }
+
+    table, th, td {
+        font-size: 12px;
+    }
+
+    th, td {
+        padding: 6px;
+    }
+
+    .search-input {
+        max-width: 100%;
+    }
+
+    .sidebar {
+        width: 200px;
+    }
+
+    .sidebar a {
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 480px) {
+    .top-bar {
+        padding: 5px;
+    }
+
+    .brand-name {
+        font-size: 18px;
+    }
+
+    .auth-link {
+        font-size: 10px;
+    }
+
+    .section h2 {
+        font-size: 18px;
+    }
+
+    table, th, td {
+        font-size: 10px;
+    }
+
+    th, td {
+        padding: 4px;
+    }
+
+    .product-form input, .product-form select, .inventory-form input,
+    .product-form button, .inventory-form button {
+        padding: 6px;
+    }
+
+    .sidebar {
+        width: 180px;
+    }
+
+    .sidebar a {
+        font-size: 12px;
+        padding: 8px 10px;
     }
 }

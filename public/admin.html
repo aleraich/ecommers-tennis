@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>RAHEL - Panel de Administración</title>
     <link rel="stylesheet" href="admin.css" />
     <style>
@@ -60,8 +60,8 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.5);
         }
         #productTable img, #variantTable img {
-            max-width: 50px;
-            max-height: 50px;
+            max-width: 40px; /* Reducido para móviles */
+            max-height: 40px;
             vertical-align: middle;
         }
         .loading-message, .error-message, .empty-message {
@@ -96,6 +96,7 @@
             border-radius: 3px;
             cursor: pointer;
             transition: background-color 0.3s;
+            font-size: 12px; /* Ajuste para móviles */
         }
         .delete-btn:hover {
             background-color: #cc0000;
